@@ -38,6 +38,6 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* modules_	
+* :ref:`modules`	
 * :ref:`search`
 
