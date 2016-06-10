@@ -9,11 +9,11 @@ from django.shortcuts import render_to_response, RequestContext
 
 def use_template(template):
     """
-    decorator to return a HTTPResponse from a function that just returns a dictionary
+    Decorator to return a HTTPResponse from a function that just returns a dictionary.
     
-    @use_template("blah.html")
-    def foo (request):
-        return {"bar":True}
+    Functions should return a dictionary.
+    
+    Usage: @use_template(template_location)
         
     """
     def outer(func):  

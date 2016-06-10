@@ -145,14 +145,7 @@ class QuickGrid(object):
     
     #typical usage:
     
-    qg = QuickGrid().open(FILEPATH)
-    
-    for r in qg:
-        #for each row
-        print r["foo"] #print the value for the column called "foo"
-    
-    
-    
+
     
     """
     
@@ -250,7 +243,7 @@ class QuickGrid(object):
 
     def open(self, filename, tab="", header_row=0,unicode=False):
         """
-        populate this ql from a files
+        populate from a file
         """
         print "Opening : {0}".format(filename)
         ext = os.path.splitext(filename)[1]

@@ -1,3 +1,5 @@
+.. _useful_inkleby.useful_django.fields:
+
 useful_inkleby.useful_django.fields package
 ===========================================
 

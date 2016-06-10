@@ -1,3 +1,6 @@
+.. _useful_inkleby.useful_django.views:
+
+
 useful_inkleby.useful_django.views package
 ==========================================
 

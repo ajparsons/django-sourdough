@@ -60,7 +60,14 @@ class AppUrl(object):
             
         local_patterns.sort(key = lambda x:len(x._regex), reverse=True)
         return local_patterns
-
+    
+    def bake(self,**kwargs):
+        """
+        bake all views with a bake_path
+        """
+        for v in self.views:
+            if hasattr(v,"bake_path") and v.bake_path:
+                v.bake(**kwargs)
 
 def include_view(app_view):
     return AppUrl(app_view).patterns()

@@ -1,3 +1,6 @@
+.. _useful_inkleby.useful_django.models:
+
+
 useful_inkleby.useful_django.models package
 ===========================================
 

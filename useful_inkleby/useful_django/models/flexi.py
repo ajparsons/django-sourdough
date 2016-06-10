@@ -2,24 +2,6 @@
 
 FlexiModel tidies up adding up methods to models and querysets.
 
-Usage:
-
-from useful_django.models.flexi import FlexiModel, querysetmethod, managermethod
-
-class Foo(FlexiModel):
-    
-    @querysetmethod
-    def bar():
-        pass
-        
-    @managermethod
-    def foobar():
-        pass
-    
-Foo.objects.foobar()
-Foo.objects.all().bar()
-
-
 '''
 
 import six
@@ -28,7 +10,7 @@ from django.db.models.base import ModelBase
 
 def allow_floating_methods(cls):
     """
-    decorator for models that allows functions to be transposed to querysets and managers
+    Decorator for models that allows functions to be transposed to querysets and managers
     can decorate models directly - or make a subclass of FlexiModel.
     
     """
@@ -36,7 +18,7 @@ def allow_floating_methods(cls):
         pass
      
     """
-    move flagged queryset methods to queryset
+    Move flagged queryset methods to queryset
     """
     for i in cls.__dict__.keys():
         method = cls.__dict__[i]
@@ -50,7 +32,7 @@ def allow_floating_methods(cls):
             return CustomQuerySet(self.model, using=self._db)        
 
     """
-    move flagged manager methods to manager
+    Move flagged manager methods to manager
     """     
     for i in cls.__dict__.keys():
         method = cls.__dict__[i]
@@ -63,7 +45,7 @@ def allow_floating_methods(cls):
      
 class ApplyManagerMethodMeta(ModelBase):
     """
-    customise the metaclass to apply a decorator that allows custom manager
+    Customise the metaclass to apply a decorator that allows custom manager
     and queryset methods
     """
     def __new__(cls, name, parents, dct):
@@ -86,7 +68,7 @@ class ApplyManagerMethodMeta(ModelBase):
  
 class FlexiModel(six.with_metaclass(ApplyManagerMethodMeta,models.Model)):
     """
-    class for models to inherit to receive correct metaclass that allows the floating decorators
+    Class for models to inherit to receive correct metaclass that allows the floating decorators
     
     use instead of models.Model
     """
@@ -96,13 +78,9 @@ class FlexiModel(six.with_metaclass(ApplyManagerMethodMeta,models.Model)):
  
 def querysetmethod(func):
     """
-    decorator for a model method to make it apply to the queryset.
-     
-    @querysetmethod
-    def foo(self):
-        pass
+    Decorator for a model method to make it apply to the queryset.
         
-    will be accessible as model.objects.all().foo()
+    Will be accessible as model.objects.all().foo()
      
     "self" will then be the query object.
      
@@ -112,11 +90,7 @@ def querysetmethod(func):
  
 def managermethod(func):
     """
-    decorator for a model method to make it a manager method instead.
-    
-    @managermethod
-    def foo(self):
-        pass
+    Decorator for a model method to make it a manager method instead.
         
     will be accessible as model.objects.foo()
      

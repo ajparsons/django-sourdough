@@ -5,7 +5,8 @@ configlocal.py
 .settings/
 .project
 .pydevproject
-
+_build/
+make.bat
 #################
 ## Eclipse
 #################

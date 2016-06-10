@@ -14,6 +14,16 @@ from django.conf.urls import url
 import os
 import io
 from functional import FunctionalView
+from dirsync import sync
+    
+def bake_static():
+    """
+    syncs the static file location to the bake directory
+    """
+    for d in settings.STATICFILES_DIRS:
+        print "syncing {0}".format(d)
+        sync(d,os.path.join(settings.BAKE_LOCATION,"static"),"sync")
+
 
 class RequestMock(RequestFactory):  
     """
@@ -46,13 +56,6 @@ class BakeView(FunctionalView):
     """
     
     bake_path = ""
-
-
-    @classmethod
-    def bake_children(cls, **kwargs):
-        for c in cls.get_subclasses():
-            if c.bake_path:
-                c.bake(**kwargs)
 
     @classmethod
     def bake(cls,limit_query=None,**kwargs):

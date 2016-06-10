@@ -8,14 +8,6 @@ class EasyBulkModel(models.Model):
     
     Mixin to help with creation of large numbers of models with streamlined syntax.
     
-    Suggested usage:
-    
-    for x in range(10000):
-        m = Model(foo=x)
-        m.queue()
-        
-    Model.save_queue()
- 
     """
     
     batch_time = models.DateTimeField(null=True,blank=True, editable=False)
