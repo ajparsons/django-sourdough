@@ -159,7 +159,6 @@ Contents:
 .. toctree::
    :maxdepth: 1
    
-   index
    useful_inkleby.useful_django.models
    useful_inkleby.useful_django.views
    useful_inkleby.useful_django.fields
