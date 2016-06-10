@@ -6,12 +6,7 @@
 useful_inkleby
 ==========================================
 
-Contents:
-
-.. toctree::
-   :maxdepth: 2
-
-Collection of useful tools for django projects.
+Collection of useful tools for django projects by `Alex Parsons <http://www.github.com/ajparsons>`_. See code on `Github <https://github.com/ajparsons/useful_inkleby>`_.
 
 :ref:`useful_inkleby.useful_django.models`:
 
@@ -157,3 +152,15 @@ If combined with IntegratedURLView by using ComboView you can bake a whole app l
     
     bake_static()
     AppUrl(views).bake()
+    
+    
+Contents:
+
+.. toctree::
+   :maxdepth: 1
+   
+   index
+   useful_inkleby.useful_django.models
+   useful_inkleby.useful_django.views
+   useful_inkleby.useful_django.fields
+   useful_inkleby.files

@@ -2,6 +2,10 @@
 
 Collection of useful tools for django projects.
 
+useful_inkleby on pypi
+
+Read the docs at: http://useful-inkleby.readthedocs.io/en/latest/
+
 useful_django.models:
 
 * FlexiModel - Allows manager and queryset methods to be added to a model using @managermethod and @querysetmethod decorators rather than creating custom managers. 

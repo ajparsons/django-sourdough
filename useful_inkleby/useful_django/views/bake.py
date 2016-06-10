@@ -6,15 +6,19 @@ Created on 26 Mar 2016
 from django.core.handlers.base import BaseHandler  
 from django.test.client import RequestFactory 
 
-from htmlmin.minify import html_minify
+
 from django.conf import settings
-from django.shortcuts import render,RequestContext
-from django.conf.urls import url 
 
 import os
 import io
 from functional import FunctionalView
 from dirsync import sync
+
+try:
+    from htmlmin.minify import html_minify
+except:
+    html_minify = lambda x: x
+
     
 def bake_static():
     """
