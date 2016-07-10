@@ -12,6 +12,7 @@ class SocialView(object):
     share_description = ""
     share_title = ""
     share_twitter = ""
+    twitter_share_image = ""
     share_image_alt = ""
     page_title = ""
 
@@ -36,8 +37,14 @@ class SocialView(object):
         
         process = lambda x: Template(x).render(c_context)
             
+        if cls.twitter_share_image:
+            twitter_img = cls.twitter_share_image
+        else:
+            twitter_img = cls.share_image
+            
         di = {'share_site_name':process(cls.share_site_name),
               'share_image':process(cls.share_image),
+              'twitter_share_image':process(twitter_img),
               'share_image_alt':process(cls.share_image_alt),
               'share_description':process(cls.share_description),
               'share_title':process(cls.share_title),
