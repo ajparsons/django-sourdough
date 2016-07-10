@@ -108,6 +108,22 @@ class BakeView(FunctionalView):
         with io.open(file_path, "w", encoding="utf-8") as f:
             f.write(html)
         
+    @classmethod
+    def write_file(cls,args,path, minimise=True):
+        """
+        more multi-purpose writer - accepts path argument
+        """
+        request = RequestMock().request()
+        content = cls.as_view()(request,*args).content
+        if minimise:
+            content = html_minify(content)
+        if type(content) == str:
+            content = unicode(content,"utf-8", errors="ignore")
+        print u"writing {0}".format(path)
+        with io.open(path,"w",encoding="utf-8") as f:
+            f.write(content)
+
+        
     def bake_args(self):
         """
         subclass with a generator that feeds all possible arguments into the view

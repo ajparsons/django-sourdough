@@ -26,8 +26,8 @@ import six
 from importlib import import_module
 from functional import FunctionalView
 from types import ModuleType
-
-
+from django.core.urlresolvers import reverse
+from django.shortcuts import  HttpResponseRedirect
 class AppUrl(object):
 
     def __init__(self,app_view):
@@ -94,6 +94,11 @@ class IntegratedURLView(FunctionalView):
     url_extra_args = {}
     
     @classmethod
+    def redirect_response(cls,*args):
+        return HttpResponseRedirect(reverse(cls.url_name,args=args))
+
+    
+    @classmethod
     def get_pattern(cls):
         """
         returns a list of conf.url objects for url patterns that match this object
@@ -101,7 +106,6 @@ class IntegratedURLView(FunctionalView):
         new_patterns = []
         def urlformat(pattern):
             return url(pattern,cls.as_view(),cls.url_extra_args,name=cls.url_name)
-        
         if cls.url_patterns:
             new_patterns = [urlformat(x) for x in cls.url_patterns]
         if cls.url_pattern:

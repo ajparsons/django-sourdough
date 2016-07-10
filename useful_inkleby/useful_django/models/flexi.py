@@ -8,6 +8,19 @@ import six
 from django.db import models
 from django.db.models.base import ModelBase
 
+
+class CustomRootManager(models.Manager):
+    
+    use_for_related_fields = True
+    
+    def get_or_none(self,*args,**kwargs):
+        try:
+            x = self.get(*args,**kwargs)
+        except self.model.DoesNotExist:
+            x = None
+        return x
+
+
 def allow_floating_methods(cls):
     """
     Decorator for models that allows functions to be transposed to querysets and managers
@@ -25,8 +38,7 @@ def allow_floating_methods(cls):
         if hasattr(method,"_querysetmethod"):
             setattr(CustomQuerySet,i,method)    
      
-    class CustomManager(models.Manager):
-        use_for_related_fields = True
+    class CustomManager(CustomRootManager):
          
         def get_queryset(self):
             return CustomQuerySet(self.model, using=self._db)        

@@ -1,12 +1,16 @@
 *.pyc
 *.sqlite3
 config.py
+setup.py
 configlocal.py
+scape_code.py
 .settings/
 .project
 .pydevproject
 _build/
 make.bat
+dist/
+MANIFEST
 #################
 ## Eclipse
 #################

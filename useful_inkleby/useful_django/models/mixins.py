@@ -2,6 +2,9 @@
 from django.db import models
 from django.utils import timezone
 
+
+
+
 class EasyBulkModel(models.Model):
     """
     Bulk Creation Mixin
@@ -79,3 +82,4 @@ class StockModelHelpers(object):
             return self.name
         else:
             return unicode(self.id)
+        

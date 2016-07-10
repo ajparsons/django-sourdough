@@ -6,6 +6,7 @@ Created on 26 Mar 2016
 
 
 from django.shortcuts import render, RequestContext
+from django.http.response import HttpResponse
 
 class FunctionalView(object):
     """
@@ -20,6 +21,8 @@ class FunctionalView(object):
     
     
     template = ""
+    require_staff = False
+    view_decorators = []
     
     @classmethod
     def as_view(cls):
@@ -28,10 +31,30 @@ class FunctionalView(object):
         """
         
         def render_func(request,*args,**kwargs):
-            context = cls().view(request,*args,**kwargs)
-            return cls().context_to_html(request,context)
             
-        return render_func
+            if cls.require_staff and request.user.is_staff == False:
+                return HttpResponse("No Access")
+            
+            view = cls()
+            
+            context = view.view(request,*args,**kwargs)
+            
+            if isinstance(context,dict):
+                context = view.extra_params(context)
+                return view.context_to_html(request,context)
+            else:
+                #if we're returning a redirect view
+                return context
+        
+        func = render_func
+        
+        for v in cls.view_decorators:
+            func = v(func)
+        
+        return func
+
+    def extra_params(self,context):
+        return context
 
     def context_to_html(self,request,context):
         html = render(request,

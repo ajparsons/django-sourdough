@@ -5,4 +5,3 @@ class FlexiBulkModel(FlexiModel,EasyBulkModel,StockModelHelpers):
     
     class Meta:
         abstract = True
-
