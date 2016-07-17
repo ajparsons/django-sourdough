@@ -114,7 +114,7 @@ class BakeView(FunctionalView):
         more multi-purpose writer - accepts path argument
         """
         request = RequestMock().request()
-        content = cls.as_view()(request,*args).content
+        content = cls.as_view(decorators=False,no_auth=True)(request,*args).content
         if minimise:
             content = html_minify(content)
         if type(content) == str:

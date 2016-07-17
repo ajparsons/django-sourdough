@@ -9,7 +9,7 @@ class HoneyPotForm(forms.Form):
     """
     Form that adds a fake field to try and trick bots
     """
-    phone_number = forms.CharField(label="phone number",required=False,widget=forms.HiddenInput())
+    phone_number = forms.CharField(label="",required=False,widget=forms.HiddenInput())
 
     
     def is_valid(self):

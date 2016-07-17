@@ -25,14 +25,14 @@ class FunctionalView(object):
     view_decorators = []
     
     @classmethod
-    def as_view(cls):
+    def as_view(cls,decorators=True,no_auth=False):
         """
         inner func hides that we need to pass a self arg to the view
         """
         
         def render_func(request,*args,**kwargs):
             
-            if cls.require_staff and request.user.is_staff == False:
+            if cls.require_staff and request.user.is_staff == False and no_auth == False:
                 return HttpResponse("No Access")
             
             view = cls()
@@ -47,9 +47,9 @@ class FunctionalView(object):
                 return context
         
         func = render_func
-        
-        for v in cls.view_decorators:
-            func = v(func)
+        if decorators:
+            for v in cls.view_decorators:
+                func = v(func)
         
         return func
 
