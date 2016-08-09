@@ -20,7 +20,7 @@ Apps then don't need a separate url.py.
 
 '''
 
-
+import re
 from django.conf.urls import url
 import six
 from importlib import import_module
@@ -28,6 +28,15 @@ from functional import FunctionalView
 from types import ModuleType
 from django.core.urlresolvers import reverse
 from django.shortcuts import  HttpResponseRedirect
+
+
+def make_comparison(v):
+    text = v
+    for s in re.findall("\((.*?)\)",v):
+        text = text.replace(s,"1")
+    return text
+
+
 class AppUrl(object):
 
     def __init__(self,app_view):
@@ -58,7 +67,7 @@ class AppUrl(object):
         for c in self.views:
             local_patterns.extend(c.get_pattern())
             
-        local_patterns.sort(key = lambda x:len(x._regex), reverse=True)
+        local_patterns.sort(key = lambda x:len(x._url_comparison), reverse=True)
         return local_patterns
     
     def bake(self,**kwargs):
@@ -98,6 +107,7 @@ class IntegratedURLView(FunctionalView):
         return HttpResponseRedirect(reverse(cls.url_name,args=args))
 
     
+    
     @classmethod
     def get_pattern(cls):
         """
@@ -105,7 +115,9 @@ class IntegratedURLView(FunctionalView):
         """
         new_patterns = []
         def urlformat(pattern):
-            return url(pattern,cls.as_view(),cls.url_extra_args,name=cls.url_name)
+            uo = url(pattern,cls.as_view(),cls.url_extra_args,name=cls.url_name)
+            uo._url_comparison = make_comparison(pattern)
+            return uo
         if cls.url_patterns:
             new_patterns = [urlformat(x) for x in cls.url_patterns]
         if cls.url_pattern:

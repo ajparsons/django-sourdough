@@ -7,6 +7,7 @@ Created on 26 Mar 2016
 
 from django.shortcuts import render, RequestContext
 from django.http.response import HttpResponse
+import htmlmin
 
 class FunctionalView(object):
     """

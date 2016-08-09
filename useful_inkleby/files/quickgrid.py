@@ -271,6 +271,10 @@ class QuickGrid(object):
         if ".xls" in file_to_use:
             self.xls_book().save(file_to_use)
         
+    def get_column(self,column_id):
+        
+        for r in self.data:
+            yield r[column_id]
 
     def use_query(self,query):
         """
