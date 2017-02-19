@@ -1,13 +1,5 @@
-'''
-Created on 26 Mar 2016
 
-@author: alex
-'''
-
-from django.shortcuts import  redirect, HttpResponseRedirect, render_to_response , RequestContext
-
-from django.conf import settings
-from django.views.decorators.cache import cache_page
+from django.shortcuts import  render_to_response , RequestContext
 
 
 def use_template(template):

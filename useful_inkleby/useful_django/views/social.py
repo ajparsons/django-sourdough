@@ -4,6 +4,7 @@ Created on Jul 6, 2016
 @author: Alex
 '''
 from django.template import Template, Context
+from django.conf import settings
 
 class SocialView(object):
     share_image = ""
@@ -12,12 +13,15 @@ class SocialView(object):
     share_description = ""
     share_title = ""
     share_twitter = ""
+    share_url = ""
     twitter_share_image = ""
     share_image_alt = ""
     page_title = ""
 
     def extra_params(self,context):
         params = super(SocialView,self).extra_params(context)
+        if hasattr(settings,"SITE_ROOT"):
+            params["SITE_ROOT"] = settings.SITE_ROOT
         extra = {"social_settings":self.social_settings(params),
                  "page_title":self._page_title(params)}
         params.update(extra)
@@ -48,6 +52,7 @@ class SocialView(object):
               'share_image_alt':process(cls.share_image_alt),
               'share_description':process(cls.share_description),
               'share_title':process(cls.share_title),
+              'url':process(cls.share_url),
               'share_image_alt':process(cls.share_image_alt),
               }
         

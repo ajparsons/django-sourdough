@@ -1,8 +1,4 @@
-'''
-Created on Jul 25, 2016
 
-@author: Alex
-'''
 from base import GenericDecorator
 
 class use_self_property(GenericDecorator):

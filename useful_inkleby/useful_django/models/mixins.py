@@ -3,8 +3,6 @@ from django.db import models
 from django.utils import timezone
 
 
-
-
 class EasyBulkModel(models.Model):
     """
     Bulk Creation Mixin
@@ -21,11 +19,22 @@ class EasyBulkModel(models.Model):
         abstract = True
 
     @classmethod
+    def queue_length(cls):
+        return len(cls.__queue)
+
+
+    @classmethod
     def _add_to_queue(cls,obj):
         """
         Add obj to class creation queue.
         """
         cls.__queue.append(obj)
+        
+        
+    @classmethod
+    def save_queue_if_count(cls,count=1000):
+        if len(cls.__queue) >= count:
+            cls.save_queue()
         
     @classmethod  
     def save_queue(cls,safe_creation_rate = 1000, retrieve=True):
@@ -37,7 +46,10 @@ class EasyBulkModel(models.Model):
         """
         n = timezone.now()
         
-        for x, q in enumerate(cls.__queue):
+        real_queue = [x for x in cls.__queue if isinstance(x,cls)]
+        cls.__queue = [x for x in cls.__queue if not isinstance(x,cls)]
+        
+        for x, q in enumerate(real_queue):
             q.batch_id = x
             q.batch_time = n
         
@@ -46,7 +58,7 @@ class EasyBulkModel(models.Model):
             for i in xrange(0, len(l), n):
                 yield l[i:i+n]
         
-        for c in chunks(cls.__queue,safe_creation_rate):
+        for c in chunks(real_queue,safe_creation_rate):
             print "saving {0} of {1}".format(len(c),cls)
             cls.objects.bulk_create(c)
         
@@ -55,11 +67,10 @@ class EasyBulkModel(models.Model):
             rel_q = cls.objects.filter(batch_time=n)
             lookup = {x:y for x,y in rel_q.values_list('batch_id','id')}
             
-            for q in cls.__queue:
+            for q in real_queue:
                 q.id = lookup[q.batch_id]
                 returning.append(q)
         
-        del cls.__queue[:]
         return returning
         
     def queue(self):

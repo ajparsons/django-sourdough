@@ -19,7 +19,9 @@ and keeps all settings associated with the view in one place.
 Apps then don't need a separate url.py. 
 
 '''
-
+from django.core.urlresolvers import (RegexURLPattern,
+    RegexURLResolver, LocaleRegexURLResolver)
+from django.core.exceptions import ImproperlyConfigured
 import re
 from django.conf.urls import url
 import six
@@ -53,10 +55,9 @@ class AppUrl(object):
         else:
             raise TypeError("Not a module or module path")
         
-        
-        for o in view_module.__dict__.iteritems():
-            if hasattr(o[1],"url_pattern"):
-                self.views.append(o[1])
+        for k,v in view_module.__dict__.iteritems():
+            if isinstance(v,type) and issubclass(v,IntegratedURLView):
+                self.views.append(v)
 
     def patterns(self):            
         """
@@ -70,6 +71,12 @@ class AppUrl(object):
         local_patterns.sort(key = lambda x:len(x._url_comparison), reverse=True)
         return local_patterns
     
+    def has_bakeable_views(self):
+        for v in self.views:
+            if hasattr(v,"bake_path") and v.bake_path:
+                return True
+        return False
+    
     def bake(self,**kwargs):
         """
         bake all views with a bake_path
@@ -78,8 +85,42 @@ class AppUrl(object):
             if hasattr(v,"bake_path") and v.bake_path:
                 v.bake(**kwargs)
 
-def include_view(app_view):
-    return AppUrl(app_view).patterns()
+def include_view(arg,namespace=None,app_name=None):
+    if app_name and not namespace:
+        raise ValueError('Must specify a namespace if specifying app_name.')
+
+    if isinstance(arg, tuple):
+        # callable returning a namespace hint
+        if namespace:
+            raise ImproperlyConfigured('Cannot override the namespace for a dynamic module that provides a namespace')
+        urlconf_module, app_name, namespace = arg
+    else:
+        # No namespace hint - use manually provided namespace
+        urlconf_module = arg
+
+    if isinstance(urlconf_module, six.string_types):
+        urlconf_module = import_module(urlconf_module)
+        
+        
+    patterns = AppUrl(urlconf_module).patterns()
+    urlconf_module.urlpatterns = patterns
+        
+    patterns = getattr(urlconf_module, 'urlpatterns', urlconf_module)
+
+    # Make sure we can iterate through the patterns (without this, some
+    # testcases will break).
+    if isinstance(patterns, (list, tuple)):
+        for url_pattern in patterns:
+            # Test if the LocaleRegexURLResolver is used within the include;
+            # this should throw an error since this is not allowed!
+            if isinstance(url_pattern, LocaleRegexURLResolver):
+                raise ImproperlyConfigured(
+                    'Using i18n_patterns in an included URLconf is not allowed.')
+
+    return (urlconf_module, app_name, namespace)
+    
+    
+    return 
 
 class IntegratedURLView(FunctionalView):
     """

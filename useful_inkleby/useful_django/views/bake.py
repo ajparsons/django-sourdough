@@ -1,8 +1,4 @@
-'''
-Created on 26 Mar 2016
 
-@author: alex
-'''
 from django.core.handlers.base import BaseHandler  
 from django.test.client import RequestFactory 
 
@@ -11,8 +7,9 @@ from django.conf import settings
 
 import os
 import io
-from functional import FunctionalView
+from functional import LogicalView
 from dirsync import sync
+from django.http import HttpResponse
 
 try:
     from htmlmin.minify import html_minify
@@ -45,7 +42,7 @@ class RequestMock(RequestFactory):
         return request 
 
 
-class BakeView(FunctionalView):
+class BakeView(LogicalView):
     """
 
     Extends functional view with baking functions. 
@@ -68,6 +65,7 @@ class BakeView(FunctionalView):
         """
         if cls.bake_path:
             print "baking {0}".format(cls.__name__)
+            cls._prepare_bake()
             i = cls()
             for o in i.bake_args(limit_query):
                 if o == None:
@@ -77,22 +75,42 @@ class BakeView(FunctionalView):
         else:
             raise ValueError("This view has no location to bake to.")
     
+    @classmethod
+    def _prepare_bake(self):
+        """
+        class method - store modifications for the class for class - e.g. precache many objects
+        for faster render
+        """
+        
+        pass
+    
+    def _get_bake_path(self,*args):
+        """
+        override to have a more clever way of specifying 
+        the destination to write to
+        """
+        if args:
+            return os.path.join(settings.BAKE_LOCATION,
+                                self.__class__.bake_path.format(*args))
+        else:
+            return os.path.join(settings.BAKE_LOCATION,
+                                self.__class__.bake_path)
+
+
+    
     def render_to_file(self,args=None,only_absent=False):
         """
         renders this set of arguments to a files
         """
         if args == None:
-            file_path = os.path.join(settings.BAKE_LOCATION,
-                                     self.__class__.bake_path)
             args = []
-        else:
-            file_path = os.path.join(settings.BAKE_LOCATION,
-                                     self.__class__.bake_path.format(*args))
+
+        file_path = self._get_bake_path(*args)
         
         if only_absent and os.path.isfile(file_path):
             return None
         
-        print "saving {0}".format(file_path)
+        print u"saving {0}".format(file_path)
         directory = os.path.dirname(file_path)
         if os.path.isdir(directory) == False:
             os.makedirs(directory)
@@ -102,8 +120,11 @@ class BakeView(FunctionalView):
         request.path = "/" + file_path.replace(settings.BAKE_LOCATION,"")
         request.path = request.path.replace("\\","/").replace("index.html","").replace(".html","")
 
-        context = self.view(request,*args)
-        html = html_minify(self.context_to_html(request,context).content)
+        context = self._get_view_context(request,*args)
+        if isinstance(context,HttpResponse):
+            html = html_minify(context.content).replace("<html><head></head><body>","").replace("</body></html>","")
+        else:
+            html = html_minify(self.context_to_html(request,context).content)
         
         with io.open(file_path, "w", encoding="utf-8") as f:
             f.write(html)
@@ -115,7 +136,7 @@ class BakeView(FunctionalView):
         """
         request = RequestMock().request()
         content = cls.as_view(decorators=False,no_auth=True)(request,*args).content
-        if minimise:
+        if "<html" in content and minimise:
             content = html_minify(content)
         if type(content) == str:
             content = unicode(content,"utf-8", errors="ignore")
@@ -124,7 +145,7 @@ class BakeView(FunctionalView):
             f.write(content)
 
         
-    def bake_args(self):
+    def bake_args(self,limit_query):
         """
         subclass with a generator that feeds all possible arguments into the view
         """

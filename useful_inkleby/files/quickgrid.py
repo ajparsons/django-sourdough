@@ -3,9 +3,11 @@ QuickGrid library - very simple communication with spreadsheets.
 v1
 '''
 import csv
-import ucsv
+import unicodecsv as ucsv
 import os
-
+from itertools import groupby
+from collections import Counter
+from _sqlite3 import Row
 try:
     from openpyxl import load_workbook
     import xlrd
@@ -16,6 +18,14 @@ except:
     xlrd = None
     xlwt = None
     Workbook = object
+
+def make_safe(v):
+    if isinstance(v,float):
+        return str(v).lower().strip()
+    if v:
+        return v.lower().strip()
+    else:
+        return ""
 
 class FlexiBook(Workbook):
     """
@@ -51,7 +61,7 @@ class FlexiBook(Workbook):
 
         
 
-def import_csv(s_file,unicode=False):
+def import_csv(s_file,unicode=False,start=0,limit=None):
     """
     imports csvs, returns head/body - switch to use different csv processor
     """
@@ -60,16 +70,25 @@ def import_csv(s_file,unicode=False):
         mod = ucsv
     else:
         mod = csv
+    count = -1
+    
+    internal_limit = None
+    if limit:
+        internal_limit = start + limit
     
     with open(s_file, 'rb') as f:
         reader = mod.reader(f)
         for row in reader:
-            body.append(row)
+            count += 1
+            if count == 0:
+                header = row
+                continue    
+            if count >= start:
+                body.append(row)
+            if limit and count == internal_limit + 1:
+                break
 
-    header = body[0]
-    body.pop(0)
     return header, body
-
 
 
 
@@ -107,7 +126,7 @@ def import_xlsx(s_file, tab="", header_row=0):
     """
     imports xlsx files
     """
-    wb = load_workbook(filename=s_file, read_only=True)
+    wb = load_workbook(filename=s_file, read_only=True, data_only=True)
     if tab == "":
         tab = wb.sheetnames[0]
     ws = wb[tab]  # ws is now an IterableWorksheet
@@ -138,6 +157,48 @@ def export_csv(file, header, body, force_unicode=False):
         w.writerows([header])
         w.writerows(body)
 
+class ItemRow(list):
+            
+    def _key_to_index(self, value):
+        if isinstance(value,int):
+            return value
+        r_v = value.strip().lower()
+        try:
+            lookup = self._header_dict[r_v]
+        except KeyError:
+            lookup = value
+        return lookup
+    
+    def __init__(self,quick_grid_instance,header_dict,*args,**kwargs):
+        
+        
+        self._header_dict =header_dict
+        self._qg = quick_grid_instance
+        
+        super(ItemRow,self).__init__(*args,**kwargs)
+        diff = len(self._qg.header) - len(self)
+        if diff > 0:
+            self.extend(["" for x in range(0,diff)])
+
+    def __getitem__(self, key):
+        return super(ItemRow, self).__getitem__(self._key_to_index(key))
+
+    def __setitem__(self, key, value):
+        return super(ItemRow, self).__setitem__(self._key_to_index(key), value)
+
+    def __getattr__(self, attr):
+        
+        if  attr <> "_header_dict" and attr in self._header_dict:
+            return self[attr]
+        return object.__getattribute__(self, attr)
+
+    def __setattr__(self, attr, value):
+        
+        if attr <> "_header_dict" and attr in self._header_dict and attr[0] <> "_":
+            self[attr] = value
+        else:
+            super(ItemRow,self).__setattr__(attr,value)
+
 class QuickGrid(object):
 
     """
@@ -149,24 +210,152 @@ class QuickGrid(object):
     
     """
     
-    def __init__(self, name=""):
+    @classmethod
+    def split_csv(cls,filename,save_folder,column_id=0,unicode=False):
+    
+        body = []
+        if unicode:
+            mod = ucsv
+        else:
+            mod = csv
+        count = -1
+        
+        last_value = None
+        current = None
+        header = cls()
+        f = open(filename, 'rb')
+        reader = mod.reader(f)
+        count = -1
+        for row in reader:
+            count += 1
+            if count == 0:
+                header.header = row
+                if isinstance(column_id,str):
+                    column_id = header.header_di()[make_safe(column_id)]
+                continue
+            if row[column_id] == None:
+                continue
+            if row[column_id] != last_value:
+                if current:
+                    current.save([save_folder,"{0}.csv".format(current.name)])
+                current = cls(row[column_id])
+                current.header = header.header
+                last_value = row[column_id]
+            current.data.append(row)
+        current.save([save_folder,"{0}.csv".format(current.name)])
+
+        
+        
+    
+    
+    @classmethod
+    def merge(cls,to_merge):
+        """
+        join a bunch of qgs together
+        """
+        new = cls()
+        source = to_merge[0]
+        new.data = list(source.data)
+        new.header = list(source.header)
+        new.add_qg(to_merge[1:])
+        return new
+    
+    def count(self,*columns):
+        
+        count = self.__class__()
+        count.header = list(columns) + ["count"]
+        values = []
+        for r in self:
+            
+            v = "|".join(["{0}".format(r[x]) for x in columns])
+            values.append(v)
+            
+        counter = Counter(values)
+        
+        for k,v in counter.iteritems():
+            row = k.split("|")
+            row += [v]
+            count.add(row)
+            
+        return count
+        
+ 
+        
+    def add_qg(self,to_merge):
+        for m in to_merge:
+            if m.header == self.header:
+                self.data.extend(m.data)
+            else:
+                raise ValueError("Header mismatch")
+            
+    
+    def __init__(self, name="",header=[]):
 
         self.name = name
-        self.header = []
+        self.header = header
         self.data = []
         self.filename = None
 
     def add(self,row):
+        
+        if isinstance(row,dict):
+            #convert a dictionary into a new row object
+            nrow = ["" for x in self.header]
+            for k,v in row.iteritems():
+                loc = self.col_to_location(k)
+                nrow[loc] = v
+            row = nrow
+
         try:
             assert len(row) == len(self.header)
         except Exception, e:
             raise ValueError("New row is larger than header.")
         self.data.append(row)
 
-    def only(self,col,value):
+    def combine(self, *args, **kwargs):
+        
+        def combo(row):
+            return "|".join(["{0}".format(row[c]) for c in args])
+        
+        if "name" in kwargs:
+            name = kwargs["name"]
+        else:
+            name = "_".join(args)
+        
+        self.generate_col(name,combo)
+        
+    def generate_col(self,name,generate_function):
+        self.header.append(name)
+        for r in self:
+            r[-1] = generate_function(r)
+        
+    def sort(self,*cols):
         """
-        returns an generator of only rows where col = value
+        sort according to columns entered (start with - to reverse)
         """
+        for c in cols[::-1]:
+            reverse = c[0] == "-"
+            if reverse:
+                v = c[1:]
+            else:
+                v = c
+            self.data.sort(key = lambda x:x[self.col_to_location(v)],reverse=reverse)
+
+    def split_on_unique(self,col):
+        location = self.col_to_location(col)
+        func = lambda x:x[location]
+        self.data.sort(key = func)
+        for k,g in groupby(self.data,func):
+            n = self.__class__(self.name + " " + k)
+            n.header = list(self.header)
+            n.data = list(g)
+            yield k,n
+
+    def counter(self,col):
+        loc = self.col_to_location(col)
+        return Counter([x[loc] for x in self.data])
+
+    def col_to_location(self,col):
         def make_safe(v):
             if v:
                 return v.lower().strip()
@@ -176,7 +365,13 @@ class QuickGrid(object):
         safe_col = make_safe(col)
         
         di = self.header_di()
-        location = di[safe_col]
+        return  di[safe_col]        
+
+    def only(self,col,value):
+        """
+        returns an generator of only rows where col = value
+        """
+        location = self.col_to_location(col)
         indexes = [x for x,y in enumerate(self.data) if y[location] == value]
         
         return self.__iter__(indexes=indexes)
@@ -241,40 +436,60 @@ class QuickGrid(object):
         wb.add_sheet_from_ql(self)
         return wb
 
-    def open(self, filename, tab="", header_row=0,unicode=False):
+    def open(self, filename, tab="", header_row=0,unicode=False,start=0,limit=None):
         """
         populate from a file
         """
-        print "Opening : {0}".format(filename)
-        ext = os.path.splitext(filename)[1]
+        if isinstance(filename,list):
+            f_name = os.path.join(*filename)
+        else:
+            f_name = filename
+        
+        print "Opening : {0}".format(f_name)
+        ext = os.path.splitext(f_name)[1]
         if ext == ".xlsx":
-            self.header, self.data = import_xlsx(filename, tab, header_row)
+            self.header, self.data = import_xlsx(f_name, tab, header_row)
         elif ext == ".csv":
-            self.header, self.data = import_csv(filename,unicode)
+            self.header, self.data = import_csv(f_name,unicode,start,limit)
         elif ext == ".xls":
-            self.header, self.data = import_xls(filename, tab, header_row)
-        self.filename = filename
+            self.header, self.data = import_xls(f_name, tab, header_row)
+        self.filename = f_name
+        
+        if self.name == "":
+            self.name =os.path.splitext(os.path.split(f_name)[1])[0]
+        
         return self
 
     def save(self, filename=None, force_unicode=False):
         """
         save out as a csv or xls
         """
-        print "Saving : {0}".format(filename)
         if filename:
-            file_to_use = filename
+            if isinstance(filename,list):
+                file_to_use = os.path.join(*filename)
+            else:
+                file_to_use = filename
         else:
             file_to_use = self.filename
-            
+        
+        print "Saving : {0}".format(file_to_use)
         if ".csv" in file_to_use:
             export_csv(file_to_use, self.header, self.data, force_unicode=force_unicode)
         if ".xls" in file_to_use:
             self.xls_book().save(file_to_use)
+       
+    def get_column(self,column_id, unique=False):
         
-    def get_column(self,column_id):
+        previous = []
         
-        for r in self.data:
-            yield r[column_id]
+        for r in self:
+            v = r[column_id]
+            if unique:
+                if v not in previous:
+                    yield v
+                    previous.append(v)
+            else:
+                yield v
 
     def use_query(self,query):
         """
@@ -288,6 +503,8 @@ class QuickGrid(object):
         returns a dictionary of 'safe' header (striped, lowered) and positions. 
         """
         def make_safe(v):
+            if isinstance(v,float):
+                return str(v).lower().strip()
             if v:
                 return v.lower().strip()
             else:
@@ -295,6 +512,22 @@ class QuickGrid(object):
 
         return {make_safe(h): x for x, h in enumerate(self.header)}
 
+    def remap(self,new_header):
+        """
+        return a new quickgrid with a reduced or changed header
+        """
+        new = self.__class__()
+        new.header = new_header
+        for r in self:
+            new.add([r[x] for x in new.header])
+        return new
+            
+    def __getitem__(self,key):
+            header_dict = self.header_di()
+            return ItemRow(self,header_dict,self.data[key])     
+
+    def __len__(self):
+        return len(self.data)
 
     def __iter__(self,indexes=None):
         """
@@ -310,30 +543,14 @@ class QuickGrid(object):
          
         """
 
-        header_dict = self.header_di()
-
-        class ItemRow(list):
-
-            def _key_to_index(self, value):
-                r_v = value.strip().lower()
-                try:
-                    lookup = header_dict[r_v]
-                except KeyError:
-                    lookup = value
-                return lookup
-
-            def __getitem__(self, key):
-                return super(ItemRow, self).__getitem__(self._key_to_index(key))
-
-            def __setitem__(self, key, value):
-                return super(ItemRow, self).__setitem__(self._key_to_index(key), value)
+        header_dict = self.header_di() 
 
         # puts back any changes into the main generator to update the
         # QuickList 
         for x,r in enumerate(self.data):
             if indexes and x not in indexes: # if only yielding certain things, ignore all others
                 continue
-            ir = ItemRow(r)
+            ir = ItemRow(self,header_dict,r)
             yield ir
             r[:] = ir[:]
             

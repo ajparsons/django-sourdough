@@ -6,9 +6,9 @@ Created on Jul 25, 2016
 '''
 import codecs
 try:
-    from ..decorators import use_self_property
-except:
     from decorators import use_self_property
+except:
+    from useful_inkleby.decorators import use_self_property
 
 
 class QuickText(object):
@@ -17,9 +17,8 @@ class QuickText(object):
     """
     
     def __init__(self,text="",filename=""):
-        self.text =text
-        self.filename=filename
-        self.test_text = "banana"
+        self.text = text
+        self.filename = filename
         if self.filename:
             self.open()
 
@@ -81,8 +80,9 @@ class QuickText(object):
             yield ul
             changed, nl = ul.get_update()
             if changed:
-                has_changed = False
-            final.append(nl)
+                has_changed = True
+            if nl != None:
+                final.append(nl)
         
         if has_changed:
             self.text = delimiter.join(final)
