@@ -19,7 +19,7 @@ setup(
   author = 'Alex Parsons',
   author_email = 'alex@alexparsons.co.uk',
   url = 'https://github.com/ajparsons/useful_inkleby', 
-  download_url = 'https://github.com/ajparsons/useful_inkleby/0.3', 
+  download_url = 'https://github.com/ajparsons/useful_inkleby/archive/0.3.tar.gz', 
   keywords = ['django'], 
   classifiers = [],
 )
