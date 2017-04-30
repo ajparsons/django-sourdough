@@ -1,2 +1,2 @@
-from quickgrid import *
-from quicktext import *
+from .quickgrid import *
+from .quicktext import *

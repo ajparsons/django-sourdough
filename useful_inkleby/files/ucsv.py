@@ -7,7 +7,7 @@ ABSTRACT
     files with comma-separated values (CSV).  This module is an
     extension/wrapper to read and write comma-separated value files in
     UTF-8 or other encodings.
-    Much of the code is stolen from an example in the 2.5.2 Python
+    Much of the scripts is stolen from an example in the 2.5.2 Python
     Library Reference, with additional wrappers for Unicode-ready
     DictReader, DictWriter.  In addition, the reader tries to turn
     things that look like numbers into actual numerical values, and
@@ -16,7 +16,7 @@ ABSTRACT
 SYNOPSIS
     >>> import ucsv as csv
 AUTHOR
-    Ed Halley (ed@halley.cc) 18 August 2009 - http://halley.cc/code/python/ucsv.py
+    Ed Halley (ed@halley.cc) 18 August 2009 - http://halley.cc/scripts/python/ucsv.py
 '''
 
 #----------------------------------------------------------------------------
@@ -26,7 +26,7 @@ import csv ; from csv import *
 __version__ = '1.0 Unicode'
 __dropins__ = [ 'reader', 'writer', 'DictReader', 'DictWriter' ]
 
-import codecs
+import scripts
 import cStringIO
 
 class UTF8Recoder:

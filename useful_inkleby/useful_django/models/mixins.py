@@ -1,6 +1,7 @@
 
 from django.db import models
 from django.utils import timezone
+from six.moves import xrange
 
 
 class EasyBulkModel(models.Model):
@@ -13,14 +14,14 @@ class EasyBulkModel(models.Model):
     
     batch_time = models.DateTimeField(null=True,blank=True, editable=False)
     batch_id = models.IntegerField(null=True,blank=True, editable=False)
-    __queue = list()
+    _queue = None
     
     class Meta:
         abstract = True
 
     @classmethod
     def queue_length(cls):
-        return len(cls.__queue)
+        return len(cls._queue)
 
 
     @classmethod
@@ -28,12 +29,18 @@ class EasyBulkModel(models.Model):
         """
         Add obj to class creation queue.
         """
-        cls.__queue.append(obj)
+        cls.init_queue()
+        cls._queue.append(obj)
         
+    @classmethod
+    def init_queue(cls):
+        if cls._queue == None:
+            cls._queue = []
         
     @classmethod
     def save_queue_if_count(cls,count=1000):
-        if len(cls.__queue) >= count:
+        cls.init_queue()
+        if len(cls._queue) >= count:
             cls.save_queue()
         
     @classmethod  
@@ -45,9 +52,11 @@ class EasyBulkModel(models.Model):
         
         """
         n = timezone.now()
+        if cls._queue == None:
+            return []
         
-        real_queue = [x for x in cls.__queue if isinstance(x,cls)]
-        cls.__queue = [x for x in cls.__queue if not isinstance(x,cls)]
+        real_queue = [x for x in cls._queue if isinstance(x,cls)]
+        cls._queue = [x for x in cls._queue if not isinstance(x,cls)]
         
         for x, q in enumerate(real_queue):
             q.batch_id = x
@@ -59,7 +68,7 @@ class EasyBulkModel(models.Model):
                 yield l[i:i+n]
         
         for c in chunks(real_queue,safe_creation_rate):
-            print "saving {0} of {1}".format(len(c),cls)
+            print("saving {0} of {1}".format(len(c),cls))
             cls.objects.bulk_create(c)
         
         returning = []

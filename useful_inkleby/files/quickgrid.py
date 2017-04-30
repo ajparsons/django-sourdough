@@ -7,7 +7,10 @@ import unicodecsv as ucsv
 import os
 from itertools import groupby
 from collections import Counter
-from _sqlite3 import Row
+import sys
+import six
+csv.field_size_limit(sys.maxsize)
+
 try:
     from openpyxl import load_workbook
     import xlrd
@@ -76,21 +79,22 @@ def import_csv(s_file,unicode=False,start=0,limit=None):
     if limit:
         internal_limit = start + limit
     
-    with open(s_file, 'rb') as f:
+    if six.PY2:
+        readtype = "rb"
+    else:
+        readtype = "rt"
+    
+    with open(s_file, readtype) as f:
         reader = mod.reader(f)
         for row in reader:
             count += 1
             if count == 0:
-                header = row
+                yield row
                 continue    
             if count >= start:
-                body.append(row)
+                yield row
             if limit and count == internal_limit + 1:
                 break
-
-    return header, body
-
-
 
 def import_xls(s_file, tab="", header_row=0):
     """
@@ -110,17 +114,11 @@ def import_xls(s_file, tab="", header_row=0):
             row = [ws.cell(r, c) for c in range(0, num_cols)]
             yield row
 
-    header = []
-    data = []
+
     for count, row in enumerate(generate_rows()):
         r = [x.value for x in row]
-        if count == header_row:
-            header = r
-        if count > header_row:
-            data.append(r)
-
-    return header, data
-
+        if count >= header_row:
+            yield r
 
 def import_xlsx(s_file, tab="", header_row=0):
     """
@@ -131,17 +129,10 @@ def import_xlsx(s_file, tab="", header_row=0):
         tab = wb.sheetnames[0]
     ws = wb[tab]  # ws is now an IterableWorksheet
 
-    header = []
-    data = []
     for count, row in enumerate(ws.rows):
         r = [x.value for x in row]
-        if count == header_row:
-            header = r
-        if count > header_row:
-            data.append(r)
-
-    return header, data
-
+        if count >= header_row:
+            yield r
 
 def export_csv(file, header, body, force_unicode=False):
     """
@@ -158,9 +149,11 @@ def export_csv(file, header, body, force_unicode=False):
         w.writerows(body)
 
 class ItemRow(list):
-            
+    """
+    object returned while iterating through a quick list
+    """   
     def _key_to_index(self, value):
-        if isinstance(value,int):
+        if isinstance(value,int) or isinstance(value,slice):
             return value
         r_v = value.strip().lower()
         try:
@@ -188,13 +181,13 @@ class ItemRow(list):
 
     def __getattr__(self, attr):
         
-        if  attr <> "_header_dict" and attr in self._header_dict:
+        if  attr != "_header_dict" and attr in self._header_dict:
             return self[attr]
         return object.__getattribute__(self, attr)
 
     def __setattr__(self, attr, value):
         
-        if attr <> "_header_dict" and attr in self._header_dict and attr[0] <> "_":
+        if attr != "_header_dict" and attr in self._header_dict and attr[0] != "_":
             self[attr] = value
         else:
             super(ItemRow,self).__setattr__(attr,value)
@@ -203,10 +196,6 @@ class QuickGrid(object):
 
     """
     A very simple files interface - loads files into memory so basic reads can be done. 
-    
-    #typical usage:
-    
-
     
     """
     
@@ -244,14 +233,11 @@ class QuickGrid(object):
             current.data.append(row)
         current.save([save_folder,"{0}.csv".format(current.name)])
 
-        
-        
-    
-    
+
     @classmethod
     def merge(cls,to_merge):
         """
-        join a bunch of qgs together
+        join a bunch of QuickGrids together
         """
         new = cls()
         source = to_merge[0]
@@ -289,12 +275,14 @@ class QuickGrid(object):
                 raise ValueError("Header mismatch")
             
     
-    def __init__(self, name="",header=[]):
+    def __init__(self, name="",header=[],cached=True):
 
         self.name = name
         self.header = header
         self.data = []
         self.filename = None
+        self.cached = cached
+        self.transformers = []
 
     def add(self,row):
         
@@ -308,8 +296,8 @@ class QuickGrid(object):
 
         try:
             assert len(row) == len(self.header)
-        except Exception, e:
-            raise ValueError("New row is larger than header.")
+        except Exception:
+            raise ValueError("New row is different size than header.")
         self.data.append(row)
 
     def combine(self, *args, **kwargs):
@@ -328,6 +316,13 @@ class QuickGrid(object):
         self.header.append(name)
         for r in self:
             r[-1] = generate_function(r)
+        
+    def transform(self,col_name,function):
+        if self.cached:
+            for r in self:
+                r[col_name] = function(r[col_name])
+        else:
+            self.transformers.append((col_name,function))
         
     def sort(self,*cols):
         """
@@ -375,6 +370,32 @@ class QuickGrid(object):
         indexes = [x for x,y in enumerate(self.data) if y[location] == value]
         
         return self.__iter__(indexes=indexes)
+        
+    def drop(self,**kwargs):
+        
+        def make_safe(v):
+            if v:
+                return v.lower().strip()
+            else:
+                return ""
+            
+        di = self.header_di()
+        loc = lambda x: di[make_safe(x)]
+
+        internal = [[loc(k),v] for k,v in kwargs.iteritems()]
+        new_data = []  
+        
+        for r in self.data:
+            match = True
+            for l, v in internal:
+                if r[l] == v:
+                    match = False
+                    break
+            if match:
+                new_data.append(r)
+        self.data = new_data
+    
+        
         
     def exclude(self,col,value):
         """
@@ -427,6 +448,12 @@ class QuickGrid(object):
         
         return self.__iter__(indexes=indexes)
         
+    def ensure_column(self,header_item):
+        """
+        if column doesn't exist, add it
+        """
+        if header_item not in self.header:
+            self.header.append(header_item)
 
     def xls_book(self):
         """
@@ -436,27 +463,48 @@ class QuickGrid(object):
         wb.add_sheet_from_ql(self)
         return wb
 
-    def open(self, filename, tab="", header_row=0,unicode=False,start=0,limit=None):
+    def load_from_generator(self):
+        for x,r in enumerate(self.generator):
+            if x == 0:
+                self.header = r
+            else:
+                self.data.append(r)        
+
+    def yield_from_generator(self):
+        for x,r in enumerate(self.generator):
+            if x == 0:
+                self.header = r
+            else:
+                yield r              
+
+    def open(self, filename, tab="", header_row=0,force_unicode=False,start=0,limit=None,**kwargs):
         """
         populate from a file
         """
+        
+        #correct for rename of argument
+        if "unicode" in kwargs:
+            force_unicode = kwargs["unicode"]
+        
         if isinstance(filename,list):
-            f_name = os.path.join(*filename)
+            self.filename = os.path.join(*filename)
         else:
-            f_name = filename
-        
-        print "Opening : {0}".format(f_name)
-        ext = os.path.splitext(f_name)[1]
-        if ext == ".xlsx":
-            self.header, self.data = import_xlsx(f_name, tab, header_row)
-        elif ext == ".csv":
-            self.header, self.data = import_csv(f_name,unicode,start,limit)
-        elif ext == ".xls":
-            self.header, self.data = import_xls(f_name, tab, header_row)
-        self.filename = f_name
-        
+            self.filename = filename
+
         if self.name == "":
-            self.name =os.path.splitext(os.path.split(f_name)[1])[0]
+            self.name = os.path.splitext(os.path.split(self.filename)[1])[0]   
+     
+        print("Opening : {0}".format(self.filename))
+        ext = os.path.splitext(self.filename)[1]
+        if ext == ".xlsx":
+            self.generator = import_xlsx(self.filename, tab, header_row)
+        elif ext == ".csv":
+            self.generator = import_csv(self.filename,force_unicode,start,limit)
+        elif ext == ".xls":
+            self.generator = import_xls(self.filename, tab, header_row)
+            
+        if self.cached:
+            self.load_from_generator()
         
         return self
 
@@ -472,7 +520,7 @@ class QuickGrid(object):
         else:
             file_to_use = self.filename
         
-        print "Saving : {0}".format(file_to_use)
+        print("Saving : {0}".format(file_to_use))
         if ".csv" in file_to_use:
             export_csv(file_to_use, self.header, self.data, force_unicode=force_unicode)
         if ".xls" in file_to_use:
@@ -529,6 +577,12 @@ class QuickGrid(object):
     def __len__(self):
         return len(self.data)
 
+    def iterator_source(self):
+        if self.cached:
+            return self.data
+        else:
+            return self.yield_from_generator()
+
     def __iter__(self,indexes=None):
         """
         generator that returns an object that's
@@ -542,15 +596,18 @@ class QuickGrid(object):
         to get the info out of the person column
          
         """
-
-        header_dict = self.header_di() 
+        header_dict = None
 
         # puts back any changes into the main generator to update the
         # QuickList 
-        for x,r in enumerate(self.data):
+        for x,r in enumerate(self.iterator_source()):
+            if header_dict == None:
+                header_dict = self.header_di() 
             if indexes and x not in indexes: # if only yielding certain things, ignore all others
                 continue
             ir = ItemRow(self,header_dict,r)
+            for col, func in self.transformers:
+                ir[col] = func(ir[col])
             yield ir
             r[:] = ir[:]
             

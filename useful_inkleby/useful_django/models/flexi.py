@@ -51,8 +51,13 @@ def allow_floating_methods(cls):
         if hasattr(method, "_managermethod"):
             setattr(CustomManager, i, method)
 
-    cls._default_manager = CustomManager
     cls.add_to_class('objects', CustomManager())
+    try:
+        cls._default_manager = cls.objects
+    except AttributeError:
+        pass # django 1.11 doesn't need this.
+    
+    
     return cls
 
 

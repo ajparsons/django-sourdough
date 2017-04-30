@@ -1,5 +1,5 @@
 
-from base import GenericDecorator
+from .base import GenericDecorator
 
 class use_self_property(GenericDecorator):
     """

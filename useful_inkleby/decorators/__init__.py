@@ -1,2 +1,2 @@
-from base import *
-from property import *
+from .base import *
+from .property import *

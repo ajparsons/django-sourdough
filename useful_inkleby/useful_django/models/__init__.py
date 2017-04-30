@@ -1,5 +1,5 @@
-from mixins import *
-from flexi import *
+from .mixins import *
+from .flexi import *
 
 class FlexiBulkModel(FlexiModel,EasyBulkModel,StockModelHelpers):
     
