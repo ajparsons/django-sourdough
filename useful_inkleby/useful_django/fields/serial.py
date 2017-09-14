@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from django.db import models
 
 try:
-    from useful_inkleby.serialisers import BasicSerial
+    from useful_inkleby.useful_django.serialisers import BasicSerial
 except:
     from ..serialisers import BasicSerial
 
