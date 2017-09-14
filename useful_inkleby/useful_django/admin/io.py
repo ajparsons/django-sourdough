@@ -68,7 +68,6 @@ def construct_model_resource(passed_model):
             
     return LocalResource
 
-
 def io_admin_register(passed_model):
     """
     filter that registers ImportExportModelAdmin and

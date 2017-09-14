@@ -4,7 +4,7 @@ Created on 26 Mar 2016
 @author: alex
 '''
 
-from django.shortcuts import render, RequestContext
+from django.shortcuts import render
 from django.http.response import HttpResponse
 from django.shortcuts import  HttpResponseRedirect
 from .exceptions import RedirectException
@@ -103,8 +103,7 @@ class FunctionalView(object):
     def context_to_html(self,request,context):
         html = render(request,
                       self.__class__.template,
-                      context=context,
-                      context_instance=RequestContext(request)
+                      context=context
                       )
         return html
     

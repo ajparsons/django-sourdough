@@ -26,7 +26,7 @@ import re
 from django.conf.urls import url
 import six
 from importlib import import_module
-from functional import FunctionalView
+from functional import FunctionalView, LogicalView
 from types import ModuleType
 from django.core.urlresolvers import reverse
 from django.shortcuts import  HttpResponseRedirect
@@ -122,7 +122,7 @@ def include_view(arg,namespace=None,app_name=None):
     
     return 
 
-class IntegratedURLView(FunctionalView):
+class IntegratedURLView(LogicalView):
     """
     
     Integrate URL configuration information into the View class.

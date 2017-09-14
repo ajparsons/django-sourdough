@@ -23,7 +23,7 @@ class MarkDownView(object):
     def get_markdown(self):
         f = codecs.open(self.__class__.markdown_loc, "rb", "cp1252")
         txt = f.read()
-        md = markdown(txt)
+        md = markdown(txt, extensions=['markdown.extensions.tables'])
         
         lines = md.split("\n")
         final = []

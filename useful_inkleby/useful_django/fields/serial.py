@@ -2,7 +2,11 @@ from __future__ import absolute_import
 
 from django.db import models
 
-from ..serialisers import BasicSerial
+try:
+    from useful_inkleby.serialisers import BasicSerial
+except:
+    from ..serialisers import BasicSerial
+
 
 class JsonBlockField(models.TextField):
     """

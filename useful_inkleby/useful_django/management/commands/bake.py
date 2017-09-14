@@ -65,7 +65,7 @@ class BaseBakeManager(object):
             os.makedirs(settings.BAKE_LOCATION)
     
     def copy_static_files(self):
-        for d in settings.STATICFILES_DIRS:
+        for d in [settings.STATIC_ROOT]:
             dir_loc = os.path.join(settings.BAKE_LOCATION,"static")
             print "syncing {0}".format(d)
             if os.path.isdir(dir_loc) == False:

@@ -336,12 +336,19 @@ class QuickGrid(object):
                 v = c
             self.data.sort(key = lambda x:x[self.col_to_location(v)],reverse=reverse)
 
-    def split_on_unique(self,col):
-        location = self.col_to_location(col)
+    def split_on_unique(self,col,col_no=None):
+        if col_no == None:
+            location = self.col_to_location(col)
+        else:
+            location = col_no
         func = lambda x:x[location]
         self.data.sort(key = func)
         for k,g in groupby(self.data,func):
-            n = self.__class__(self.name + " " + k)
+            if k:
+                name = self.name + " " + k
+            else:
+                name = self.name + " " + "None"
+            n = self.__class__(name)
             n.header = list(self.header)
             n.data = list(g)
             yield k,n
