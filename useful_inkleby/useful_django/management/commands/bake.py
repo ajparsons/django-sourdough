@@ -73,9 +73,6 @@ class BaseBakeManager(object):
             sync(d,dir_loc,"sync")        
         
     def amend_settings(self,**kwargs):
-        settings.HTML_MINIFY = True
-        settings.DEBUG = False
-        
         for k,v in kwargs.iteritems():
             if v.lower() == "true":
                 rv = True
@@ -84,10 +81,7 @@ class BaseBakeManager(object):
             else:
                 rv = v
             setattr(settings,k,rv)
-        settings.IS_LIVE = not settings.DEBUG
-        if hasattr(settings,'LIVE_ROOT'):
-            settings.SITE_ROOT = settings.LIVE_ROOT
-        
+
     def bake_app(self):
         self.app_urls.bake()
         
