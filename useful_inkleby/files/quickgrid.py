@@ -7,6 +7,7 @@ import unicodecsv as ucsv
 import os
 from itertools import groupby
 from collections import Counter
+import codecs
 import sys
 import six
 csv.field_size_limit(sys.maxsize)
@@ -64,7 +65,7 @@ class FlexiBook(Workbook):
 
         
 
-def import_csv(s_file,unicode=False,start=0,limit=None):
+def import_csv(s_file,unicode=False,start=0,limit=None,codec=""):
     """
     imports csvs, returns head/body - switch to use different csv processor
     """
@@ -84,8 +85,15 @@ def import_csv(s_file,unicode=False,start=0,limit=None):
     else:
         readtype = "rt"
     
-    with open(s_file, readtype) as f:
-        reader = mod.reader(f)
+    if codec:
+        o = codecs.open
+        args = [s_file, readtype,codec]
+    else:
+        o = open
+        args = (s_file, readtype)
+    
+    with o(*args) as f:
+        reader = mod.reader((line.replace('\0','') for line in f))
         for row in reader:
             count += 1
             if count == 0:
@@ -138,7 +146,6 @@ def export_csv(file, header, body, force_unicode=False):
     """
     exports csv (non-unicode)
     """
-    
     if force_unicode:
         module = ucsv
     else:
@@ -200,15 +207,42 @@ class QuickGrid(object):
     """
     
     @classmethod
+    def split_csv_count(cls,filename,save_folder,limit=1000,force_unicode=False):
+    
+
+        if force_unicode:
+            mod = ucsv
+        else:
+            mod = csv
+        
+        header = cls()
+        f = open(filename, 'rb')
+        reader = mod.reader(f)
+        count = -1
+        for row in reader:
+            count += 1
+            if count == 0:
+                header.header = row
+                current = cls(count)
+                current.header = header.header
+                continue
+        
+            current.data.append(row)
+            if count % limit == 0:
+                current.save([save_folder,"{0}.csv".format(current.name)],force_unicode=force_unicode)
+                current.data = []
+                current.name = count
+                
+        current.save([save_folder,"{0}.psv".format(current.name)],force_unicode=force_unicode)
+    
+    @classmethod
     def split_csv(cls,filename,save_folder,column_id=0,unicode=False):
     
-        body = []
         if unicode:
             mod = ucsv
         else:
             mod = csv
-        count = -1
-        
+
         last_value = None
         current = None
         header = cls()
@@ -324,6 +358,18 @@ class QuickGrid(object):
         else:
             self.transformers.append((col_name,function))
         
+        
+
+    def rename_column(self,old_name,new_name):
+        """
+        find old header - replace with enw one
+        """
+        safe_col = make_safe(old_name)
+        di = self.header_di()
+        location = di[safe_col]
+        self.header[location] = new_name
+
+        
     def sort(self,*cols):
         """
         sort according to columns entered (start with - to reverse)
@@ -345,7 +391,7 @@ class QuickGrid(object):
         self.data.sort(key = func)
         for k,g in groupby(self.data,func):
             if k:
-                name = self.name + " " + k
+                name = self.name + " {0}".format(k)
             else:
                 name = self.name + " " + "None"
             n = self.__class__(name)
@@ -368,6 +414,15 @@ class QuickGrid(object):
         
         di = self.header_di()
         return  di[safe_col]        
+
+    def include(self,col,values):
+        """
+        returns an generator of only rows where value in col
+        """
+        location = self.col_to_location(col)
+        indexes = [x for x,y in enumerate(self.data) if y[location]in values]
+        
+        return self.__iter__(indexes=indexes)
 
     def only(self,col,value):
         """
@@ -402,7 +457,25 @@ class QuickGrid(object):
                 new_data.append(r)
         self.data = new_data
     
+    def expand(self,col,seperator=","):
+        safe_col = make_safe(col)
+        di = self.header_di()
+        location = di[safe_col]
         
+        new_data = []
+        
+        for r in self.data:
+            cell = r[location]
+            if cell:
+                values = cell.split(seperator)
+            else:
+                values = [""]
+            for v in values:
+                row = list(r)
+                row[location] = v
+                new_data.append(row)
+        
+        self.data = new_data
         
     def exclude(self,col,value):
         """
@@ -461,6 +534,8 @@ class QuickGrid(object):
         """
         if header_item not in self.header:
             self.header.append(header_item)
+            return True
+        return False
 
     def xls_book(self):
         """
@@ -484,7 +559,7 @@ class QuickGrid(object):
             else:
                 yield r              
 
-    def open(self, filename, tab="", header_row=0,force_unicode=False,start=0,limit=None,**kwargs):
+    def open(self, filename, tab="", header_row=0,force_unicode=False,start=0,limit=None,codec="",**kwargs):
         """
         populate from a file
         """
@@ -506,7 +581,7 @@ class QuickGrid(object):
         if ext == ".xlsx":
             self.generator = import_xlsx(self.filename, tab, header_row)
         elif ext == ".csv":
-            self.generator = import_csv(self.filename,force_unicode,start,limit)
+            self.generator = import_csv(self.filename,force_unicode,start,limit,codec)
         elif ext == ".xls":
             self.generator = import_xls(self.filename, tab, header_row)
             
@@ -529,6 +604,8 @@ class QuickGrid(object):
         
         print("Saving : {0}".format(file_to_use))
         if ".csv" in file_to_use:
+            export_csv(file_to_use, self.header, self.data, force_unicode=force_unicode)
+        if ".psv" in file_to_use:
             export_csv(file_to_use, self.header, self.data, force_unicode=force_unicode)
         if ".xls" in file_to_use:
             self.xls_book().save(file_to_use)
