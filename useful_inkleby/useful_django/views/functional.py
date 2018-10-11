@@ -126,11 +126,9 @@ class LogicalView(FunctionalView):
     e.g. args = ['id_no'] - will create self.id_no from the view argument. 
     if an arg is a tuple ('id_no','5') - will set a default value.
 
-    functions that start prelogic_ are run before logic()
-    functions that start postlogic_ are run after logic()
-
-    can also use prelogic and postlogic decorators
-    this accept an optional order argument - lower order have priority.
+    Use prelogic and postlogic decorators to run functions before or afer logic.
+    These accept an optional order paramter. 
+    Lower order have priority.
     Default order is 5.
 
     """
