@@ -9,9 +9,21 @@ from django.core.management import BaseCommand
 from django.conf import settings
 from django.apps import apps as project_apps
 from ...views import AppUrl
+from ...view.bake import BaseBakeManger
 
 class Command(BaseCommand):
+    """
+    example usage:
+
+    manage.py bake
+    manage.py bake appname
     
+    When it examines an app will look for:
+    
+    A bake.py with a bake function
+    A views module with a BakeManager subclassed from BaseBakeManager
+    A views module using views subclassed from BakeView
+    """
     help = "Enter an app to bake, or no app label to bake all apps"
     
     def add_arguments(self, parser):
@@ -51,43 +63,3 @@ class Command(BaseCommand):
                     manager = BaseBakeManager(views_module)
             if manager:
                 manager.bake(**kwargs)
-
-class BaseBakeManager(object):
-    
-    def __init__(self,views_module=None):
-        if views_module:
-            self.app_urls = AppUrl(views_module)
-        else:
-            self.app_urls = None
-    
-    def create_bake_dir(self):
-        if not os.path.exists(settings.BAKE_LOCATION):
-            os.makedirs(settings.BAKE_LOCATION)
-    
-    def copy_static_files(self):
-        for d in [settings.STATIC_ROOT]:
-            dir_loc = os.path.join(settings.BAKE_LOCATION,"static")
-            print "syncing {0}".format(d)
-            if os.path.isdir(dir_loc) == False:
-                os.makedirs(dir_loc)
-            sync(d,dir_loc,"sync")        
-        
-    def amend_settings(self,**kwargs):
-        for k,v in kwargs.iteritems():
-            if v.lower() == "true":
-                rv = True
-            elif v.lower() == "false":
-                rv = False
-            else:
-                rv = v
-            setattr(settings,k,rv)
-
-    def bake_app(self):
-        self.app_urls.bake()
-        
-    def bake(self,**kwargs):
-        if self.app_urls and self.app_urls.has_bakeable_views():
-            self.amend_settings(**kwargs)
-            self.create_bake_dir()
-            self.copy_static_files()
-            self.bake_app()

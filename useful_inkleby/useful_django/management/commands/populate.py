@@ -3,8 +3,17 @@ from importlib import import_module
 from django.apps import apps as project_apps
 
 class Command(BaseCommand):
+    """
+    Example usage:
     
-    help = "Enter an app to bake"
+    manage.py populate
+    manage.py populate appname
+    
+    Looks for an app/populate.py and runs
+    a populate function
+    
+    """
+    help = "Enter an app to populate"
     
     def add_arguments(self, parser):
         parser.add_argument('app', nargs='*', type=str)

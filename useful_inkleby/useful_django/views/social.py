@@ -1,12 +1,22 @@
 '''
-Created on Jul 6, 2016
-
-@author: Alex
+View for managing social properties of view
 '''
+
 from django.template import Template, Context
 from django.conf import settings
 
 class SocialView(object):
+    """
+    Uses class properties for social arguments
+    Allows inheritance. 
+    Template language can be used
+    e.g.
+    
+    share_title = "{{title}}"
+    
+    Where a view has a 'title' variable. 
+    
+    """
     share_image = ""
     share_site_name = ""
     share_image_alt = ""

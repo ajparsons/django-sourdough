@@ -6,7 +6,7 @@ Created on 26 Mar 2016
 
 from django.shortcuts import render
 from django.http.response import HttpResponse
-from django.shortcuts import  HttpResponseRedirect
+from django.shortcuts import HttpResponseRedirect
 from .exceptions import RedirectException
 
 try:
@@ -14,238 +14,246 @@ try:
 except:
     from ..decorators import GenericDecorator
 
+
 def handle_redirect(func):
-    
-    def inner(*args,**kwargs):
+
+    def inner(*args, **kwargs):
         try:
-            return func(*args,**kwargs)
+            return func(*args, **kwargs)
         except RedirectException as new_url:
             return HttpResponseRedirect(new_url)
-        
+
     return inner
+
 
 class FunctionalView(object):
     """
     Very simple class-based view that simple expects the class to have a 
     'template' variable and a 'view' function that expects (self, request). 
-    
-    
+
     Idea is to preserve cleanness of functional view logic but tidy up the 
     most common operation. 
-    
+
     """
-    
+
     template = ""
     require_staff = False
     require_login = False
-    login_test = staticmethod(lambda u:u.is_authenticated())
-    staff_test = staticmethod(lambda u:u.is_staff)
+    login_test = staticmethod(lambda u: u.is_authenticated())
+    staff_test = staticmethod(lambda u: u.is_staff)
     view_decorators = []
-    
+
     @classmethod
-    def as_view(cls,decorators=True,no_auth=False):
+    def as_view(cls, decorators=True, no_auth=False):
         """
         if decorators is True - we apply any view_decorators listed for the class
         if no_auth = True, we bypass staff and user testing(useful for baking)
 
         """
-        
-        def render_func(request,*args,**kwargs):
-            
+
+        def render_func(request, *args, **kwargs):
+
             view = cls()
-            
+
             if no_auth == False:
                 if cls.require_login and cls.login_test(request.user) == False:
                     return view.access_denied_no_auth(request)
-                
+
                 if cls.require_staff and cls.staff_test(request.user) == False:
                     return view.access_denied_no_staff(request)
-            
-            context = view._get_view_context(request,*args,**kwargs)
-            
-            if isinstance(context,dict):
+
+            context = view._get_view_context(request, *args, **kwargs)
+
+            if isinstance(context, dict):
                 context = view.extra_params(context)
-                return view.context_to_html(request,context)
+                return view.context_to_html(request, context)
             else:
-                #if we're returning a redirect view
+                # if we're returning a redirect view
                 return context
-        
+
         func = render_func
-        func = handle_redirect(func) # allow RedirectException
+        func = handle_redirect(func)  # allow RedirectException
         if decorators:
             for v in cls.view_decorators:
                 func = v(func)
-        
+
         return func
-    
-    def access_denied_no_auth(self,request):
+
+    def access_denied_no_auth(self, request):
         """
         override to provide a better response if someone needs to login
         """
         return HttpResponse("No Access")
-    
-    def access_denied_no_staff(self,request):
+
+    def access_denied_no_staff(self, request):
         """
         override to provide a better response if someone needs to be staff
         """
         return HttpResponse("No Access")
-    
-    def _get_view_context(self,request,*args,**kwargs):
-        context = self.view(request,*args,**kwargs)
-        
-        if isinstance(context,dict):
-            context = self.extra_params(context)
-        return context     
 
-    def extra_params(self,context):
+    def _get_view_context(self, request, *args, **kwargs):
+        context = self.view(request, *args, **kwargs)
+
+        if isinstance(context, dict):
+            context = self.extra_params(context)
         return context
 
-    def context_to_html(self,request,context):
+    def extra_params(self, context):
+        return context
+
+    def context_to_html(self, request, context):
         html = render(request,
                       self.__class__.template,
                       context=context
                       )
         return html
-    
-    def view(self,request):
+
+    def view(self, request):
         return {}
-    
+
+
 class LogicalView(FunctionalView):
     """
     Runs with class-based logic while trying to keep the guts exposed. 
-    
+
     request becomes self.request
-    
+
     expects a 'logic' rather than a view function (no args).
-    
+
     giving the class an 'args' list of strings tells it what to convert 
     view arguments into.
-    
+
     e.g. args = ['id_no'] - will create self.id_no from the view argument. 
     if an arg is a tuple ('id_no','5') - will set a default value.
-    
+
     functions that start prelogic_ are run before logic()
     functions that start postlogic_ are run after logic()
-    
+
     can also use prelogic and postlogic decorators
     this accept an optional order argument - lower order have priority.
     Default order is 5.
-    
-    
-    default is 5.
-        
-    
+
     """
-    
+
     args = []
 
     def __init__(self):
         self.record_new = False
         self.values = []
 
-    def __setattr__(self,key,value):
-        if hasattr(self,"record_new") and self.record_new:
+    def __setattr__(self, key, value):
+        if hasattr(self, "record_new") and self.record_new:
             self.values.append(key)
-        super(FunctionalView,self).__setattr__(key,value)
-    
-    def view(self,request,*args,**kwargs):
+        super(FunctionalView, self).__setattr__(key, value)
+
+    def view(self, request, *args, **kwargs):
         """
         override with something that returns a dictionary 
         to use plain functional view logic
         """
-        
         self.request = request
-        self.record_new = True #enable new value recording
-        
+        self.record_new = True  # enable new value recording
+
         arg_mappings = []
         """
         assign any default values
         """
         for a in self.__class__.args:
-            if isinstance(a,tuple):
-                setattr(self,a[0],a[1])
+            if isinstance(a, tuple):
+                setattr(self, a[0], a[1])
                 arg_mappings.append(a[0])
             else:
                 arg_mappings.append(a)
         """
         assign other results
         """
-        for x,a in enumerate(args):
+        for x, a in enumerate(args):
             try:
                 arg_name = arg_mappings[x]
             except IndexError:
                 raise ValueError("Mapping not assigned for {0}".format(a))
-            setattr(self,arg_name,a)
-            
-        for k,v in kwargs.iteritems():
-            setattr(self,k,v)
-        
+            setattr(self, arg_name, a)
+
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
         prelogic = self._prelogic()
         if prelogic:
-            return prelogic        
+            return prelogic
         logic = self.logic()
         if logic:
             return logic
         postlogic = self._postlogic()
         if postlogic:
-            return postlogic       
-        
-        return {k:getattr(self,k) for k in self.values}
-    
-    
-    def _logic_processing(self,prefix):
+            return postlogic
+
+        return {k: getattr(self, k) for k in self.values}
+
+    def _logic_processing(self, prefix):
         """
         run all pre and post logic functions in order.
         """
         def keying(v):
-            if hasattr(v,"order"):
+            if hasattr(v, "order"):
                 return v.order
             else:
                 return 5
-        
+
         def ga(k):
-            return getattr(self,k)
+            return getattr(self, k)
         """
         has a function had either a decorator or a name prefix assigned to it
         """
-        passes_func_test = lambda k: hasattr(k,"_prefix") and k._prefix == prefix
-        passes_test = lambda k: prefix + "_" in k or passes_func_test(ga(k))
+        def passes_func_test(k): return hasattr(
+            k, "_prefix") and k._prefix == prefix
+
+        def passes_test(k): return prefix + "_" in k or passes_func_test(ga(k))
         funcs = [k for k in dir(self) if passes_test(k)]
         funcs = [ga(k) for k in funcs]
         funcs.sort(key=lambda x: keying(x))
         for f in funcs:
             r = f()
-            if r: #if any value is returned, escalate
+            if r:  # if any value is returned, escalate
                 return r
-                
+
     def _prelogic(self):
-        return self._logic_processing("prelogic")            
+        return self._logic_processing("prelogic")
 
     def _postlogic(self):
-        return self._logic_processing("postlogic")     
-    
+        return self._logic_processing("postlogic")
+
     def logic(self):
         """
-        any new values assigned to self will be passed to the template bare
+        any new values assigned to self will be passed to the template
         self.value becomes value
         """
         pass
-    
+
 
 class prelogic(GenericDecorator):
+    """
+    decorates a function to run before the logic view
+    accepts an order kwarg to manage competing functions
+    """
     prefix = "prelogic"
-    default_kwargs = {"order":5}
-    
-    def post_creation(self,obj):
+    default_kwargs = {"order": 5}
+
+    def post_creation(self, obj):
         obj._prefix = self.__class__.prefix
         obj.order = self.order
         return obj
-        
+
+
 class postlogic(GenericDecorator):
-    prefix = "postlogic"
-    default_kwargs = {"order":5}
+    """
+    decorates a function to run after the logic view
+    accepts an order kwarg to manage competing functions
+    """
     
-    def post_creation(self,obj):
+    prefix = "postlogic"
+    default_kwargs = {"order": 5}
+
+    def post_creation(self, obj):
         obj._prefix = self.__class__.prefix
         obj.order = self.order
         return obj

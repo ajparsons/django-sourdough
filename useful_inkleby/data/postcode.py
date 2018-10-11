@@ -2,7 +2,6 @@
 Basic postcode sanity detector
 '''
 
-
 #postcode formats that are valid in the uk
 valid_postcode_formats = [
     "AA9A 9AA",
