@@ -1,5 +1,5 @@
 
-from django.shortcuts import  render_to_response , RequestContext
+from django.template.loader import get_template
 
 
 def use_template(template):
@@ -13,8 +13,9 @@ def use_template(template):
     """
     def outer(func):  
         def inner(request,*args,**kwargs):
-            return render_to_response(template,
-                                      context=func(request,*args,**kwargs),
-                                      context_instance=RequestContext(request))
+            temp = get_template(template)
+            context = func(request,*args,**kwargs)
+            return temp.render(context=context,
+                               request=request)
         return inner
     return outer
