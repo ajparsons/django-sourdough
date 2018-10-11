@@ -9,7 +9,7 @@ from django.core.management import BaseCommand
 from django.conf import settings
 from django.apps import apps as project_apps
 from ...views import AppUrl
-from ...view.bake import BaseBakeManger
+from ...views.bake import BaseBakeManager
 
 class Command(BaseCommand):
     """
