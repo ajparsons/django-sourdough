@@ -6,6 +6,8 @@ Subpackages
 
 .. toctree::
 
+    useful_inkleby.data
+    useful_inkleby.decorators
     useful_inkleby.files
     useful_inkleby.useful_django
 

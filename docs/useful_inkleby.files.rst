@@ -1,29 +1,9 @@
-
-.. _useful_inkleby.files:
-
 useful_inkleby.files package
 ============================
-        
-QuickGrid Usage
--------------------------------------
-        
-.. code-block:: python
-        
-    grid = QuickGrid().open(FILEPATH)
-    
-    for r in grid:
-        #for each row
-        print r["foo"] #print the value for the column called "foo"
-    
-    for r in grid.only("city","london"):
-        #for each row
-        print r["foo"]
 
-    for r in grid.exclude("fruit","banana"):
-        #for each row
-        print r["foo"]
-        
-    
+Submodules
+----------
+
 useful_inkleby.files.quickgrid module
 -------------------------------------
 
@@ -31,4 +11,21 @@ useful_inkleby.files.quickgrid module
     :members:
     :undoc-members:
     :show-inheritance:
-    
+
+useful_inkleby.files.quicktext module
+-------------------------------------
+
+.. automodule:: useful_inkleby.files.quicktext
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+
+Module contents
+---------------
+
+.. automodule:: useful_inkleby.files
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,6 +1,3 @@
-.. _useful_inkleby.useful_django.views:
-
-
 useful_inkleby.useful_django.views package
 ==========================================
 
@@ -23,6 +20,14 @@ useful_inkleby.useful_django.views.decorators module
     :undoc-members:
     :show-inheritance:
 
+useful_inkleby.useful_django.views.exceptions module
+----------------------------------------------------
+
+.. automodule:: useful_inkleby.useful_django.views.exceptions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 useful_inkleby.useful_django.views.functional module
 ----------------------------------------------------
 
@@ -35,6 +40,14 @@ useful_inkleby.useful_django.views.mixins module
 ------------------------------------------------
 
 .. automodule:: useful_inkleby.useful_django.views.mixins
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+useful_inkleby.useful_django.views.social module
+------------------------------------------------
+
+.. automodule:: useful_inkleby.useful_django.views.social
     :members:
     :undoc-members:
     :show-inheritance:
