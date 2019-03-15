@@ -234,6 +234,7 @@ class prelogic(GenericDecorator):
     accepts an order kwarg to manage competing functions
     """
     prefix = "prelogic"
+    args_map = ["order"]
     default_kwargs = {"order": 5}
 
     def post_creation(self, obj):
@@ -249,6 +250,7 @@ class postlogic(GenericDecorator):
     """
     
     prefix = "postlogic"
+    args_map = ["order"]
     default_kwargs = {"order": 5}
 
     def post_creation(self, obj):
