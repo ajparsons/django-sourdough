@@ -37,23 +37,6 @@ def bake_static():
         sync(d, os.path.join(settings.BAKE_LOCATION, "static"), "sync")
 
 
-class RequestMock(RequestFactory):
-    """
-    Construct a generic request object to get results of view
-    """
-
-    def request(self, **request):
-        # https://gist.github.com/tschellenbach/925270
-        request = RequestFactory.request(self, **request)
-        handler = BaseHandler()
-        handler.load_middleware()
-        for middleware_method in handler._request_middleware:
-            if middleware_method(request):
-                raise Exception("Couldn't create request mock object - "
-                                "request middleware returned a response")
-        return request
-
-
 class BakeView(LogicalView):
     """
 
@@ -152,12 +135,13 @@ class BakeView(LogicalView):
         if os.path.isdir(directory) == False:
             os.makedirs(directory)
 
-        request = RequestMock().request()
+        
 
-        request.path = "/" + file_path.replace(settings.BAKE_LOCATION, "")
-        request.path = request.path.replace(
+        request_path = file_path.replace(settings.BAKE_LOCATION, "")
+        request_path = request_path.replace(
             "\\", "/").replace("index.html", "").replace(".html", "")
-
+        request = RequestFactory().get(request_path)
+        
         context = self._get_view_context(request, *args)
         if isinstance(context, HttpResponse):
             html = html_minify(context.content).replace(
@@ -184,7 +168,7 @@ class BakeView(LogicalView):
         with io.open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def bake_args(self, limit_query):
+    def bake_args(self, limit_query=None):
         """
         subclass with a generator that feeds all possible arguments into the view
         """
@@ -223,7 +207,7 @@ class BaseBakeManager(object):
             sync(d, dir_loc, "sync")
 
     def amend_settings(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if v.lower() == "true":
                 rv = True
             elif v.lower() == "false":
