@@ -118,17 +118,17 @@ class BakeView(LogicalView):
             else:
                 bake_path = self.__class__.bake_path
         else:
-            rev =  reverse(self.__class__.url_name,args=args)
-            bake_path = rev.replace("/","\\")[1:]
+            rev = reverse(self.__class__.url_name, args=args)
+            bake_path = rev.replace("/", "\\")[1:]
             if bake_path[-1] == "\\":
                 bake_path += "index.html"
             else:
                 bake_path += ".html"
-        
-        return  os.path.join(settings.BAKE_LOCATION,
+
+        return os.path.join(settings.BAKE_LOCATION,
                             bake_path)
 
-    def render_to_file(self, args=None, only_absent=False):
+    def render_to_file(self, args=None, only_absent=False, only_old=False):
         """
         renders this set of arguments to a files
         """
@@ -139,6 +139,13 @@ class BakeView(LogicalView):
 
         if only_absent and os.path.isfile(file_path):
             return None
+        
+        if os.path.isfile(file_path) and only_old:
+            t = os.path.getmtime(file_path)
+            last_modified = datetime.datetime.fromtimestamp(t)
+            print last_modified
+            if last_modified > datetime.datetime.now() - datetime.timedelta(days=1):
+                return None
 
         print u"saving {0}".format(file_path)
         directory = os.path.dirname(file_path)
