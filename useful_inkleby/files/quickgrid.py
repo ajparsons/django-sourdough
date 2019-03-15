@@ -590,7 +590,7 @@ class QuickGrid(object):
         
         return self
 
-    def save(self, filename=None, force_unicode=False):
+    def save(self, filename=None, force_unicode=False, quiet=False):
         """
         save out as a csv or xls
         """
@@ -602,7 +602,8 @@ class QuickGrid(object):
         else:
             file_to_use = self.filename
         
-        print("Saving : {0}".format(file_to_use))
+        if quiet == False:
+            print("Saving : {0}".format(file_to_use))
         if ".csv" in file_to_use:
             export_csv(file_to_use, self.header, self.data, force_unicode=force_unicode)
         if ".psv" in file_to_use:
