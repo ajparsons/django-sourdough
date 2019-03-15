@@ -1,8 +1,8 @@
-from functional import *
-from bake import *
-from url import *
-from social import *
-from exceptions import *
+from .functional import *
+from .bake import *
+from .url import *
+from .social import *
+from .exceptions import *
 
 class LogicalURLView(BakeView,IntegratedURLView):
     """

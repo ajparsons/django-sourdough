@@ -172,7 +172,7 @@ class LogicalView(FunctionalView):
                 raise ValueError("Mapping not assigned for {0}".format(a))
             setattr(self, arg_name, a)
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
         prelogic = self._prelogic()

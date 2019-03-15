@@ -1,1 +1,1 @@
-from basic_json import *
+from .basic_json import *

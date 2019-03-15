@@ -8,12 +8,12 @@ import os
 import datetime
 import io
 
-from functional import LogicalView
+from .functional import LogicalView
 from dirsync import sync
 from django.http import HttpResponse
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
-from url import AppUrl
+from .url import AppUrl
 
 try:
     from htmlmin.minify import html_minify
@@ -33,7 +33,7 @@ def bake_static():
     syncs the static file location to the bake directory
     """
     for d in settings.STATICFILES_DIRS:
-        print "syncing {0}".format(d)
+        print ("syncing {0}".format(d))
         sync(d, os.path.join(settings.BAKE_LOCATION, "static"), "sync")
 
 
@@ -76,7 +76,7 @@ class BakeView(LogicalView):
         render all versions of this view into a files
         """
 
-        print "baking {0}".format(cls.__name__)
+        print ("baking {0}".format(cls.__name__))
         cls._prepare_bake()
         i = cls()
 
@@ -144,11 +144,10 @@ class BakeView(LogicalView):
         if os.path.isfile(file_path) and only_old:
             t = os.path.getmtime(file_path)
             last_modified = datetime.datetime.fromtimestamp(t)
-            print last_modified
             if last_modified > datetime.datetime.now() - datetime.timedelta(days=1):
                 return None
 
-        print u"saving {0}".format(file_path)
+        print (u"saving {0}".format(file_path))
         directory = os.path.dirname(file_path)
         if os.path.isdir(directory) == False:
             os.makedirs(directory)
@@ -181,7 +180,7 @@ class BakeView(LogicalView):
             content = html_minify(content)
         if type(content) == str:
             content = unicode(content, "utf-8", errors="ignore")
-        print u"writing {0}".format(path)
+        print (u"writing {0}".format(path))
         with io.open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
@@ -218,7 +217,7 @@ class BaseBakeManager(object):
     def copy_static_files(self):
         for d in [settings.STATIC_ROOT]:
             dir_loc = self.get_static_destination()
-            print "syncing {0}".format(d)
+            print ("syncing {0}".format(d))
             if os.path.isdir(dir_loc) == False:
                 os.makedirs(dir_loc)
             sync(d, dir_loc, "sync")

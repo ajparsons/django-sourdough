@@ -19,17 +19,22 @@ and keeps all settings associated with the view in one place.
 Apps then don't need a separate url.py. 
 
 '''
-from django.core.urlresolvers import (RegexURLPattern,
-                                      RegexURLResolver, LocaleRegexURLResolver)
-from django.core.exceptions import ImproperlyConfigured
+
 import re
-from django.conf.urls import url
 import six
 from importlib import import_module
-from functional import FunctionalView, LogicalView
 from types import ModuleType
-from django.core.urlresolvers import reverse
+
+from django.urls import (
+    LocalePrefixPattern, reverse
+)
+from django.core.exceptions import ImproperlyConfigured
+from django.conf.urls import url
 from django.shortcuts import HttpResponseRedirect
+
+
+from .functional import FunctionalView, LogicalView
+
 
 
 def make_comparison(v):
@@ -55,7 +60,7 @@ class AppUrl(object):
         else:
             raise TypeError("Not a module or module path")
 
-        for k, v in view_module.__dict__.iteritems():
+        for k, v in view_module.__dict__.items():
             if isinstance(v, type) and issubclass(v, IntegratedURLView):
                 self.views.append(v)
 
@@ -116,7 +121,7 @@ def include_view(arg, namespace=None, app_name=None):
         for url_pattern in patterns:
             # Test if the LocaleRegexURLResolver is used within the include;
             # this should throw an error since this is not allowed!
-            if isinstance(url_pattern, LocaleRegexURLResolver):
+            if isinstance(url_pattern, LocalePrefixPattern):
                 raise ImproperlyConfigured(
                     'Using i18n_patterns in an included URLconf is not allowed.')
 

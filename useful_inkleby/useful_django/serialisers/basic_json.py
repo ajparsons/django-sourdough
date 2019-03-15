@@ -23,8 +23,10 @@ class BasicSerial(object):
     """
     very basic recursive object serialiser
     """
-
-    allowed = [str, unicode, int, float]
+    if six.PY2:
+        allowed = [str, unicode, int, float]
+    else:
+        allowed = [bytes,str, int, float]
     classes = {}
 
     @classmethod
@@ -57,7 +59,7 @@ class BasicSerial(object):
             return [cls.convert_object(x) for x in obj]
 
         if isinstance(obj, dict):
-            return {x: cls.convert_object(y) for x, y in obj.iteritems()}
+            return {x: cls.convert_object(y) for x, y in obj.items()}
 
         # all other objects
         """
@@ -105,7 +107,7 @@ class BasicSerial(object):
                 return ins
             else:
                 # recursive dictionary restore
-                return {x: cls.restore_object(y) for x, y in obj.iteritems()}
+                return {x: cls.restore_object(y) for x, y in obj.items()}
 
 
 def register_for_serial(cls):
@@ -163,7 +165,7 @@ class SerialBase(object):
         can be overridden on individual classes
         """
         self.__dict__.update({x: BasicSerial.restore_object(y)
-                              for x, y in values.iteritems()})
+                              for x, y in values.items()})
 
     def serial_dumps(self):
         return {"_type": self.__class__.__name__,

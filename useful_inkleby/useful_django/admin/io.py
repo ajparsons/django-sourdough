@@ -38,14 +38,19 @@ class PastSafeModelResource(resources.ModelResource):
         Returns the widget that would likely be associated with each
         Django type.
         """
+        
+        
+        
         result = default
         internal_type = f.get_internal_type()
         if internal_type in ('ManyToManyField', ):
             result = functools.partial(widgets.ManyToManyWidget,
                     model=f.rel.to)
         if internal_type in ('ForeignKey', 'OneToOneField', ):
+            #django 2.0 patch
+            f_rel = f.rel.to if hasattr(f, 'rel') else f.remote_field.related_model
             result = functools.partial(widgets.ForeignKeyWidget,
-                    model=f.rel.to)
+                    model=f_rel)
         if internal_type in ('DecimalField', ):
             result = widgets.DecimalWidget
         if internal_type in ('DateTimeField', ):
