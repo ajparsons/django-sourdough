@@ -2,11 +2,12 @@
 from django.core.handlers.base import BaseHandler
 from django.test.client import RequestFactory
 
-
 from django.conf import settings
 
 import os
+import datetime
 import io
+
 from functional import LogicalView
 from dirsync import sync
 from django.http import HttpResponse
@@ -189,52 +190,53 @@ class BakeView(LogicalView):
         subclass with a generator that feeds all possible arguments into the view
         """
         return [None]
-    
+
 
 class BaseBakeManager(object):
     """
     Manager for bake command function
     Subclass as views.BakeManager to add more custom behaviour
-    
+
     """
-    def __init__(self,views_module=None):
+
+    def __init__(self, views_module=None):
         if views_module:
             self.app_urls = AppUrl(views_module)
         else:
             self.app_urls = None
-    
+
     def create_bake_dir(self):
         if not os.path.exists(settings.BAKE_LOCATION):
             os.makedirs(settings.BAKE_LOCATION)
-    
+
     def get_static_destination(self):
-        if hasattr(settings,"BAKE_STATIC_LOCATION"):
+        if hasattr(settings, "BAKE_STATIC_LOCATION"):
             return settings.BAKE_STATIC_LOCATION
         else:
-            return os.path.join(settings.BAKE_LOCATION,"static")
-    
+            return os.path.join(settings.BAKE_LOCATION, "static")
+
     def copy_static_files(self):
         for d in [settings.STATIC_ROOT]:
             dir_loc = self.get_static_destination()
             print "syncing {0}".format(d)
             if os.path.isdir(dir_loc) == False:
                 os.makedirs(dir_loc)
-            sync(d,dir_loc,"sync")        
-        
-    def amend_settings(self,**kwargs):
-        for k,v in kwargs.iteritems():
+            sync(d, dir_loc, "sync")
+
+    def amend_settings(self, **kwargs):
+        for k, v in kwargs.iteritems():
             if v.lower() == "true":
                 rv = True
             elif v.lower() == "false":
                 rv = False
             else:
                 rv = v
-            setattr(settings,k,rv)
+            setattr(settings, k, rv)
 
     def bake_app(self):
         self.app_urls.bake()
-        
-    def bake(self,**kwargs):
+
+    def bake(self, **kwargs):
         """
         this is the main function
         """
