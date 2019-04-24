@@ -21,7 +21,7 @@ def handle_redirect(func):
         try:
             return func(*args, **kwargs)
         except RedirectException as new_url:
-            return HttpResponseRedirect(new_url)
+            return HttpResponseRedirect(str(new_url))
 
     return inner
 
@@ -39,12 +39,10 @@ class FunctionalView(object):
     template = ""
     require_staff = False
     require_login = False
-    login_test = staticmethod(lambda u: u.is_authenticated())
-    staff_test = staticmethod(lambda u: u.is_staff)
     view_decorators = []
 
     @classmethod
-    def as_view(cls, decorators=True, no_auth=False):
+    def as_view(cls, decorators=True):
         """
         if decorators is True - we apply any view_decorators listed for the class
         if no_auth = True, we bypass staff and user testing(useful for baking)
@@ -54,13 +52,6 @@ class FunctionalView(object):
         def render_func(request, *args, **kwargs):
 
             view = cls()
-
-            if no_auth == False:
-                if cls.require_login and cls.login_test(request.user) == False:
-                    return view.access_denied_no_auth(request)
-
-                if cls.require_staff and cls.staff_test(request.user) == False:
-                    return view.access_denied_no_staff(request)
 
             context = view._get_view_context(request, *args, **kwargs)
 

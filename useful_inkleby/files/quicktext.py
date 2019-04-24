@@ -62,7 +62,7 @@ class QuickText(object):
         final = []
         has_changed = False
         
-        class UnicodeLine(unicode):
+        class UnicodeLine(str):
             """
             basic subclass to allow you to update values back through the loop
             """
@@ -75,8 +75,14 @@ class QuickText(object):
                 else:
                     return False, self    
         
-        for l in self.text.split(delimiter):
-            ul = UnicodeLine(l)
+        lines = self.text.split(delimiter)
+        lines = [UnicodeLine(l) for l in lines]
+        
+        for n, ul in enumerate(lines):
+            if n != len(lines)-1:
+                ul.future = lines[n+1]
+            else:
+                ul.future = None
             yield ul
             changed, nl = ul.get_update()
             if changed:

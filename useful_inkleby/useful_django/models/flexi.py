@@ -72,8 +72,9 @@ class ApplyManagerMethodMeta(ModelBase):
         """
         is_abstract = False
         try:
-            if dct['Meta'].abstract:
-                is_abstract = True
+            if hasattr(dct['Meta'],"abstract"):
+                if dct['Meta'].abstract:
+                    is_abstract = True
         except KeyError:
             pass
 

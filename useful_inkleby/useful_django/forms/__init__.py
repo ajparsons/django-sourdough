@@ -1,3 +1,3 @@
 
-from honey_pot import *
-from fields import *
+from .honey_pot import *
+from .fields import *
