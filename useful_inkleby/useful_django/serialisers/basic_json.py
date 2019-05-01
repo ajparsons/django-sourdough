@@ -102,7 +102,7 @@ class BasicSerial(object):
             if "_pickle" in obj:
                 # object restoration
 
-                ins = pickle.loads(str(obj["_pickle"]))
+                ins = pickle.loads(str(obj["_pickle"]).encode("utf-8"))
 
                 return ins
             else:

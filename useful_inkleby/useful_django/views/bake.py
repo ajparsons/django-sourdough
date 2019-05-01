@@ -157,13 +157,13 @@ class BakeView(LogicalView):
         """
         more multi-purpose writer - accepts path argument
         """
-        request = RequestMock().request()
-        content = cls.as_view(decorators=False, no_auth=True)(
+        request = RequestFactory().get(path)
+        content = cls.as_view(decorators=False)(
             request, *args).content
-        if "<html" in content and minimise:
+        if b"<html" in content and minimise:
             content = html_minify(content)
-        if type(content) == str:
-            content = unicode(content, "utf-8", errors="ignore")
+        if type(content) == bytes:
+            content = str(content, "utf-8", errors="ignore")
         print (u"writing {0}".format(path))
         with io.open(path, "w", encoding="utf-8") as f:
             f.write(content)

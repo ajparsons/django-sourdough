@@ -15,7 +15,7 @@ class JsonBlockField(models.TextField):
     from the one object. 
     """
 
-    def from_db_value(self, value, expression, connection, context):
+    def from_db_value(self, value, expression, connection):
         if value is None:
             return []
         return BasicSerial.loads(value)
