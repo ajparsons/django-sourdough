@@ -62,7 +62,7 @@ class QuickText(object):
         final = []
         has_changed = False
         
-        class UnicodeLine(str):
+        class UnicodeLine(unicode):
             """
             basic subclass to allow you to update values back through the loop
             """

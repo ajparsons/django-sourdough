@@ -86,6 +86,12 @@ def import_csv(s_file, unicode=False, start=0, limit=None, codec=""):
         readtype = "rb"
     else:
         readtype = "rt"
+        
+    if unicode:
+        if six.PY2:
+            readtype = "rb"
+        else:
+            readtype = "rb"
 
     if codec:
         o = codecs.open
@@ -94,8 +100,13 @@ def import_csv(s_file, unicode=False, start=0, limit=None, codec=""):
         o = open
         args = (s_file, readtype)
 
+    def fix_line(v):
+        if type(v) == str:
+            return v.replace('\0', '')
+        else:
+            return v.replace(b'\0', b'')
     with o(*args) as f:
-        reader = mod.reader((line.replace('\0', '') for line in f))
+        reader = mod.reader((fix_line(line) for line in f))
         for row in reader:
             count += 1
             if count == 0:
@@ -158,7 +169,7 @@ def export_csv(file, header, body, force_unicode=False):
         module = ucsv
     else:
         module = csv
-    with open(file, 'wb') as f:
+    with open(file, 'w',newline='') as f:
         w = module.writer(f)
         w.writerows([header])
         w.writerows(body)
