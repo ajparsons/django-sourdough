@@ -147,16 +147,23 @@ class BakeView(LogicalView):
         request = RequestFactory().get(request_path)
         
         context = self._get_view_context(request, *args)
+        
+        banned_types = ['text/csv']
+        
         if isinstance(context, HttpResponse):
-            html = html_minify(context.content).replace(
+            html = html_minify(context.content)
+            if context.content_type not in banned_types:
+                html = html.replace(
                 "<html><head></head><body>", "").replace("</body></html>", "")
         else:
             html = html_minify(self.context_to_html(request, context).content)
 
         if type(html) == bytes:
-            html = html.decode("utf-8") 
-        with io.open(file_path, "w", encoding="utf-8") as f:
-            f.write(html)
+            with io.open(file_path, "wb") as f:
+                f.write(html)
+        else:
+            with io.open(file_path, "w", encoding="utf-8") as f:
+                f.write(html)
 
     @classmethod
     def write_file(cls, args, path, minimise=True):
