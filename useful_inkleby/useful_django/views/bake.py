@@ -52,6 +52,7 @@ class BakeView(LogicalView):
     """
 
     bake_path = ""
+    bake_file_type = "html"
 
     @classmethod
     def bake(cls, limit_query=None, **kwargs):
@@ -105,9 +106,9 @@ class BakeView(LogicalView):
             rev = reverse(self.__class__.url_name, args=args)
             bake_path = rev.replace("/", "\\")[1:]
             if bake_path[-1] == "\\":
-                bake_path += "index.html"
+                bake_path += "index." + self.__class__.bake_file_type
             else:
-                bake_path += ".html"
+                bake_path += "." + self.__class__.bake_file_type
 
         return os.path.join(settings.BAKE_LOCATION,
                             bake_path)
