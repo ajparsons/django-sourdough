@@ -149,6 +149,8 @@ class BakeView(LogicalView):
         else:
             html = html_minify(self.context_to_html(request, context).content)
 
+        if type(html) == bytes:
+            html = html.decode("utf-8") 
         with io.open(file_path, "w", encoding="utf-8") as f:
             f.write(html)
 
