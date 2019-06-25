@@ -152,7 +152,7 @@ class BakeView(LogicalView):
         
         if isinstance(context, HttpResponse):
             html = html_minify(context.content)
-            if context.content_type not in banned_types:
+            if context["Content-Type"] not in banned_types:
                 html = html.replace(
                 "<html><head></head><body>", "").replace("</body></html>", "")
         else:
