@@ -9,7 +9,12 @@ try:
     from decorators import use_self_property
 except:
     from useful_inkleby.decorators import use_self_property
+import six
 
+if six.PY2:
+    unicodetype = unicode
+else:
+    unicodetype = str
 
 class QuickText(object):
     """
@@ -62,7 +67,7 @@ class QuickText(object):
         final = []
         has_changed = False
         
-        class UnicodeLine(unicode):
+        class UnicodeLine(unicodetype):
             """
             basic subclass to allow you to update values back through the loop
             """
