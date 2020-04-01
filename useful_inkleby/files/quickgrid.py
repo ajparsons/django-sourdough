@@ -169,7 +169,7 @@ def export_csv(file, header, body, force_unicode=False):
         module = ucsv
     else:
         module = csv
-    with open(file, 'w',newline='') as f:
+    with open(file, 'wb') as f:
         w = module.writer(f)
         w.writerows([header])
         w.writerows(body)
