@@ -2,6 +2,8 @@
 import datetime
 import io
 import os
+import time
+from datetime import datetime
 
 from dirsync import sync
 from django.conf import settings
@@ -9,7 +11,7 @@ from django.core.handlers.base import BaseHandler
 from django.http import HttpResponse
 from django.test.client import RequestFactory
 from django.urls import reverse
-import time
+
 from .functional import LogicalView
 from .url import AppUrl
 
@@ -94,23 +96,32 @@ class BakeView(LogicalView):
         if worker:
             print("Processing as worker {0} of {1}".format(
                 worker, worker_count))
+            worker_threshold = worker
+            if worker == worker_count:
+                worker_threshold = 0
+        step = 20
+        start = datetime.now()
 
         for n, o in enumerate(options):
             # divide work into piles and skip those not needed
             if worker:
-                if (n + 1) % worker_count != worker:
+                if (n + 1) % worker_count != worker_threshold:
                     continue
 
             if o == None:
                 rendered = i.render_to_file(**kwargs)
             else:
                 rendered = i.render_to_file(o, **kwargs)
-            if n % 10 == 0 and rendered:
+            if n % step == 0 and rendered:
+                end = datetime.now()
+                time_taken = end - start
                 p = round(((n+1)/total_to_bake) * 100, 2)
                 print("{type}: {done} out of {total} ({percent}%)".format(type=class_name,
                                                                           done=n+1,
                                                                           total=total_to_bake,
                                                                           percent=p))
+                print("{step} completed in {time}.".format(step=step, time=time_taken))
+                start = end
 
     @ classmethod
     def _prepare_bake(self):
@@ -153,6 +164,7 @@ class BakeView(LogicalView):
         """
         if args == None:
             args = []
+
 
         file_path = self._get_bake_path(*args)
 
