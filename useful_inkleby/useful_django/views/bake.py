@@ -101,18 +101,18 @@ class BakeView(LogicalView):
                 worker_threshold = 0
         step = 20
         start = datetime.now()
-
+        process_count = 0
         for n, o in enumerate(options):
             # divide work into piles and skip those not needed
             if worker:
                 if (n + 1) % worker_count != worker_threshold:
                     continue
-
+            process_count += 1
             if o == None:
                 rendered = i.render_to_file(**kwargs)
             else:
                 rendered = i.render_to_file(o, **kwargs)
-            if n % step == 0 and rendered:
+            if process_count % step == 0 and rendered:
                 end = datetime.now()
                 time_taken = end - start
                 p = round(((n+1)/total_to_bake) * 100, 2)
