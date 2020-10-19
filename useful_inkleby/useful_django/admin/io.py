@@ -38,9 +38,6 @@ class PastSafeModelResource(resources.ModelResource):
         Returns the widget that would likely be associated with each
         Django type.
         """
-        
-        
-        
         result = default
         internal_type = f.get_internal_type()
         if internal_type in ('ManyToManyField', ):

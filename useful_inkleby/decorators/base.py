@@ -1,7 +1,8 @@
 '''
-Created on Jul 25, 2016
+GenericDecorator 
 
-@author: Alex
+Tidies up russian doll approach to decorators.
+
 '''
 import six
 from inspect import isfunction
@@ -24,28 +25,35 @@ class DecortorMeta(type):
 
 class GenericDecorator(six.with_metaclass(DecortorMeta)):
     """
-    tidies up shell game of decorators. 
-    arguments passed to the decorator at creation
+    Tidies up russian doll approach to decorators.
+
+    Arguments passed to the decorator at creation
     end up as self.args and self.kwargs.
     kwargs are also added to self. 
-    if args_map is populated - will also add those to self
+    if args_map is populated - will also add arguments pass when decorating
 
     args_map = ("foo",)
 
-    populates self.foo with args[0]
+    @decorator("hello")
 
-    if there is no args_map can be used bare (without initalisation)
+    populates self.foo with "hello"
+
+    if there is no args_map, decorators can be used bare (without initalisation)
+
+    e.g. @decorator
 
     default_kwargs sets the default value of any kwargs that might be passed in 
-    (also added to self)
 
-    override self.gateway if it's a choice between using this function and 
+    default_kwargs = {"foo":"hello"}
+
+    Override options:
+
+    self.gateway - if it's a choice between using this function and 
     a different one
 
-    overide self.arg_decorator to adjust arguments being passed in
+    self.arg_decorator - to adjust arguments being passed in
 
-    expects self, function, then delivers any args and kwargs passed to 
-    the function
+
 
     """
     args_map = []
@@ -130,7 +138,7 @@ class GenericDecorator(six.with_metaclass(DecortorMeta)):
         """
         override if this is a "return this or something else" decorator
 
-        Use super or call self.raw_decorator() to proceed
+        return super or self.raw_decorator() to proceed
         """
         return self.raw_decorator()
 
@@ -163,7 +171,7 @@ class GenericDecorator(six.with_metaclass(DecortorMeta)):
 
     def post_creation(self, obj):
         """
-        passed self and the created object
+        passed self the resulting function
         return final object when done
         """
         return obj

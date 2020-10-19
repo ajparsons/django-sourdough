@@ -1,18 +1,16 @@
 
-from django.core.handlers.base import BaseHandler
-from django.test.client import RequestFactory
-
-from django.conf import settings
-
-import os
 import datetime
 import io
+import os
 
-from .functional import LogicalView
 from dirsync import sync
+from django.conf import settings
+from django.core.handlers.base import BaseHandler
 from django.http import HttpResponse
+from django.test.client import RequestFactory
 from django.urls import reverse
-
+import time
+from .functional import LogicalView
 from .url import AppUrl
 
 try:
@@ -33,14 +31,14 @@ def bake_static():
     syncs the static file location to the bake directory
     """
     for d in settings.STATICFILES_DIRS:
-        print ("syncing {0}".format(d))
+        print("syncing {0}".format(d))
         sync(d, os.path.join(settings.BAKE_LOCATION, "static"), "sync")
 
 
 class BakeView(LogicalView):
     """
 
-    Extends functional view with baking functions. 
+    Extends functional view with baking functions.
 
     expects a bake_args() generator that returns a series
     of different sets of arguments to bake into files.
@@ -53,18 +51,22 @@ class BakeView(LogicalView):
 
     bake_path = ""
     bake_file_type = "html"
+    baking_options = {"baking": False}
 
     @classmethod
-    def bake(cls, limit_query=None, **kwargs):
+    def bake(cls, **kwargs):
         """
         render all versions of this view into a files
         """
-
-        print ("baking {0}".format(cls.__name__))
+        class_name = cls.url_name
+        print("baking {type}".format(type=class_name))
+        cls.baking_options.update(kwargs)
+        cls.baking_options["baking"] = True
         cls._prepare_bake()
         i = cls()
 
         func = i.bake_args
+        limit_query = None
         if six.PY2:
             l = len(getargspec(i.bake_args).args)
         else:
@@ -75,13 +77,42 @@ class BakeView(LogicalView):
         else:
             generator = i.bake_args()
 
-        for o in generator:
-            if o == None:
-                i.render_to_file(**kwargs)
-            else:
-                i.render_to_file(o, **kwargs)
+        options = list(generator)
 
-    @classmethod
+        if options:
+            # based on --restrict_1, restrict_2 arguments - reduce arguments just to those that match
+            for n in range(1, 11):
+                restrict = kwargs["restrict_{0}".format(n)]
+                if restrict:
+                    options = [x for x in options if not x or x[n-1] in restrict]
+
+        total_to_bake = float(len(options))
+
+        # can split the task into different piles for different workers
+        worker_count = kwargs["worker_count"]
+        worker = kwargs["worker"]
+        if worker:
+            print("Processing as worker {0} of {1}".format(
+                worker, worker_count))
+
+        for n, o in enumerate(options):
+            # divide work into piles and skip those not needed
+            if worker:
+                if (n + 1) % worker_count != worker:
+                    continue
+
+            if o == None:
+                rendered = i.render_to_file(**kwargs)
+            else:
+                rendered = i.render_to_file(o, **kwargs)
+            if n % 10 == 0 and rendered:
+                p = round(((n+1)/total_to_bake) * 100, 2)
+                print("{type}: {done} out of {total} ({percent}%)".format(type=class_name,
+                                                                          done=n+1,
+                                                                          total=total_to_bake,
+                                                                          percent=p))
+
+    @ classmethod
     def _prepare_bake(self):
         """
         class method - store modifications for the class for class
@@ -92,7 +123,7 @@ class BakeView(LogicalView):
 
     def _get_bake_path(self, *args):
         """
-        override to have a more clever way of specifying 
+        override to have a more clever way of specifying
         the destination to write to
         uses class.bake_path is present, if not constructs
         from url of view
@@ -116,7 +147,7 @@ class BakeView(LogicalView):
         return os.path.join(settings.BAKE_LOCATION,
                             bake_path)
 
-    def render_to_file(self, args=None, only_absent=False, only_old=False):
+    def render_to_file(self, args=None, only_absent=False, only_old=0, skip_errors=False, retry_errors=3, **kwargs):
         """
         renders this set of arguments to a files
         """
@@ -126,37 +157,80 @@ class BakeView(LogicalView):
         file_path = self._get_bake_path(*args)
 
         if only_absent and os.path.isfile(file_path):
-            return None
-        
+            return False
+
         if os.path.isfile(file_path) and only_old:
             t = os.path.getmtime(file_path)
             last_modified = datetime.datetime.fromtimestamp(t)
-            if last_modified > datetime.datetime.now() - datetime.timedelta(days=1):
-                return None
+            if last_modified > datetime.datetime.now() - datetime.timedelta(days=only_old):
+                return False
 
-        print (u"saving {0}".format(file_path))
+        print(u"saving {0}".format(file_path))
         directory = os.path.dirname(file_path)
         if os.path.isdir(directory) == False:
             os.makedirs(directory)
-
-        
 
         request_path = file_path.replace(settings.BAKE_LOCATION, "")
         request_path = request_path.replace(
             "\\", "/").replace("index.html", "").replace(".html", "")
         request = RequestFactory().get(request_path)
-        
-        context = self._get_view_context(request, *args)
-        
+
+        error_count = 0
+        context = None
+        # error handling, allow repeats or skip
+        while context is None:
+            try:
+                context = self._get_view_context(request, *args)
+            except Exception as e:
+                error_count += 1
+                if error_count < retry_errors:
+                    print("retrying {0}".format(error_count))
+                    time.sleep(5)
+                    pass
+                else:
+                    if not skip_errors:
+                        raise e
+                    else:
+                        print(
+                            "suppressing error: {0} - {1}".format(type(e).__name__, e))
+                        break
+        if not context:
+            return None
+
         banned_types = ['text/csv']
-        
+
+        # if a valid response has already been generated by some layer of the structure
         if isinstance(context, HttpResponse):
             html = html_minify(context.content)
             if context["Content-Type"] not in banned_types:
                 html = html.replace(
-                "<html><head></head><body>", "").replace("</body></html>", "")
+                    "<html><head></head><body>", "").replace("</body></html>", "")
         else:
-            html = html_minify(self.context_to_html(request, context).content)
+            # normal case, we give the context to a view
+            error_count = 0
+            result = None
+            # error handling, allow repeats or skip
+            while result is None:
+                try:
+                    result = self.context_to_html(request, context)
+                except Exception as e:
+                    error_count += 1
+                    if error_count < retry_errors:
+                        print("retrying {0}".format(error_count))
+                        time.sleep(5)
+                        pass
+                    else:
+                        if not skip_errors:
+                            raise e
+                        else:
+                            print(
+                                "suppressing error: {0} - {1}".format(type(e).__name__, e))
+                            break
+
+            if not result:
+                return False
+
+            html = html_minify(result.content)
 
         if type(html) == bytes:
             with io.open(file_path, "wb") as f:
@@ -165,7 +239,9 @@ class BakeView(LogicalView):
             with io.open(file_path, "w", encoding="utf-8") as f:
                 f.write(html)
 
-    @classmethod
+        return True
+
+    @ classmethod
     def write_file(cls, args, path, minimise=True):
         """
         more multi-purpose writer - accepts path argument
@@ -177,7 +253,7 @@ class BakeView(LogicalView):
             content = html_minify(content)
         if type(content) == bytes:
             content = str(content, "utf-8", errors="ignore")
-        print (u"writing {0}".format(path))
+        print(u"writing {0}".format(path))
         with io.open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
@@ -214,30 +290,25 @@ class BaseBakeManager(object):
     def copy_static_files(self):
         for d in [settings.STATIC_ROOT]:
             dir_loc = self.get_static_destination()
-            print ("syncing {0}".format(d))
+            print("syncing {0}".format(d))
             if os.path.isdir(dir_loc) == False:
                 os.makedirs(dir_loc)
             sync(d, dir_loc, "sync")
 
     def amend_settings(self, **kwargs):
-        for k, v in kwargs.items():
-            if v.lower() == "true":
-                rv = True
-            elif v.lower() == "false":
-                rv = False
-            else:
-                rv = v
-            setattr(settings, k, rv)
+        pass
 
     def bake_app(self):
-        self.app_urls.bake()
+        self.app_urls.bake(**self.arg_options)
 
-    def bake(self, **kwargs):
+    def bake(self, options):
         """
         this is the main function
         """
+        self.arg_options = options
         if self.app_urls and self.app_urls.has_bakeable_views():
-            self.amend_settings(**kwargs)
+            self.amend_settings()
             self.create_bake_dir()
-            self.copy_static_files()
+            if options["skip_static"] is False:
+                self.copy_static_files()
             self.bake_app()

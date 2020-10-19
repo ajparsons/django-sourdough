@@ -45,7 +45,6 @@ class FunctionalView(object):
     def as_view(cls, decorators=True):
         """
         if decorators is True - we apply any view_decorators listed for the class
-        if no_auth = True, we bypass staff and user testing(useful for baking)
 
         """
 
@@ -70,18 +69,6 @@ class FunctionalView(object):
 
         return func
 
-    def access_denied_no_auth(self, request):
-        """
-        override to provide a better response if someone needs to login
-        """
-        return HttpResponse("No Access")
-
-    def access_denied_no_staff(self, request):
-        """
-        override to provide a better response if someone needs to be staff
-        """
-        return HttpResponse("No Access")
-
     def _get_view_context(self, request, *args, **kwargs):
         context = self.view(request, *args, **kwargs)
 
@@ -92,9 +79,12 @@ class FunctionalView(object):
     def extra_params(self, context):
         return context
 
+    def _get_template_path(self):
+        return self.__class__.template
+
     def context_to_html(self, request, context):
         html = render(request,
-                      self.__class__.template,
+                      self._get_template_path(),
                       context=context
                       )
         return html
@@ -105,7 +95,7 @@ class FunctionalView(object):
 
 class LogicalView(FunctionalView):
     """
-    Runs with class-based logic while trying to keep the guts exposed. 
+    Runs with class-based logic.
 
     request becomes self.request
 
@@ -114,8 +104,8 @@ class LogicalView(FunctionalView):
     giving the class an 'args' list of strings tells it what to convert 
     view arguments into.
 
-    e.g. args = ['id_no'] - will create self.id_no from the view argument. 
-    if an arg is a tuple ('id_no','5') - will set a default value.
+    e.g. args = ['id_no','slug',] - will create self.id_no, self.slug from the arguments.
+    if an arg is a tuple ('id_no','5'), this will set a default value.
 
     Use prelogic and postlogic decorators to run functions before or afer logic.
     These accept an optional order paramter. 
@@ -166,6 +156,7 @@ class LogicalView(FunctionalView):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+         # returning a HTTP response or redirect early iterates up
         prelogic = self._prelogic()
         if prelogic:
             return prelogic
@@ -216,7 +207,7 @@ class LogicalView(FunctionalView):
         any new values assigned to self will be passed to the template
         self.value becomes value
         """
-        pass
+        return None
 
 
 class prelogic(GenericDecorator):
@@ -239,7 +230,7 @@ class postlogic(GenericDecorator):
     decorates a function to run after the logic view
     accepts an order kwarg to manage competing functions
     """
-    
+
     prefix = "postlogic"
     args_map = ["order"]
     default_kwargs = {"order": 5}

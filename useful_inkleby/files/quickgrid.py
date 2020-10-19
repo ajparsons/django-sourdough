@@ -14,6 +14,7 @@ csv.field_size_limit(sys.maxsize)
 
 try:
     from openpyxl import load_workbook
+    from openpyxl import Workbook as xWorkbook
     import xlrd
     import xlwt
     from xlwt import Workbook
@@ -31,6 +32,28 @@ def make_safe(v):
         return v.lower().strip()
     else:
         return ""
+
+
+class xFlexiBook(xWorkbook):
+
+    def add_sheet_from_ql(self, ql):
+
+        ws = self.active
+        sheet_name = ql.name
+        if not sheet_name:
+            sheet_name = "sheet1"
+        ws.title = sheet_name
+
+        all = [ql.header] + ql.data
+
+        for i, h in enumerate(ql.header):
+            ws.cell(row=1, column=i + 1).value = h
+
+        row = 1
+        for r in ql.data:
+            row += 1
+            for i, item in enumerate(r):
+                ws.cell(row=row, column=i + 1).value = item
 
 
 class FlexiBook(Workbook):
@@ -86,7 +109,7 @@ def import_csv(s_file, unicode=False, start=0, limit=None, codec=""):
         readtype = "rb"
     else:
         readtype = "rt"
-        
+
     if unicode:
         if six.PY2:
             readtype = "rb"
@@ -152,14 +175,15 @@ def import_xlsx(s_file, tab="", header_row=0):
     if type(tab) == int:
         tab = wb.sheetnames[tab]
     ws = wb[tab]  # ws is now an IterableWorksheet
-    
+
     def generator():
         for count, row in enumerate(ws.rows):
             r = [x.value for x in row]
             if count >= header_row:
                 yield r
-                
+
     return tab, generator
+
 
 def export_csv(file, header, body, force_unicode=False):
     """
@@ -562,6 +586,14 @@ class QuickGrid(object):
         wb.add_sheet_from_ql(self)
         return wb
 
+    def xlsx_book(self):
+        """
+        create xls book from current ql
+        """
+        wb = xFlexiBook()
+        wb.add_sheet_from_ql(self)
+        return wb
+
     def load_from_generator(self):
         for x, r in enumerate(self.generator):
             if x == 0:
@@ -627,10 +659,12 @@ class QuickGrid(object):
         if ".csv" in file_to_use:
             export_csv(file_to_use, self.header, self.data,
                        force_unicode=force_unicode)
-        if ".psv" in file_to_use:
+        elif ".psv" in file_to_use:
             export_csv(file_to_use, self.header, self.data,
                        force_unicode=force_unicode)
-        if ".xls" in file_to_use:
+        elif ".xlsx" in file_to_use:
+            self.xlsx_book().save(file_to_use)
+        elif ".xls" in file_to_use:
             self.xls_book().save(file_to_use)
 
     def get_column(self, column_id, unique=False):

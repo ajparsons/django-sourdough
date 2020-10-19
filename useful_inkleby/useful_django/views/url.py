@@ -3,16 +3,16 @@
 IntegratedURLView - Sidestep django's url.py based setup and integrate
 urls directly with view classes rather than keeping them seperate.
 
-This will mix-in either with the functional inkleby view or the default
+This will mix-in either with the functional view or the default
 django class-based views. 
 
-In views module you set up a series of classes that inherit from
+In the views module you set up a series of classes that inherit from
 IntegratedURLView and then connect up in project url like so:
 
 url(r'^foo/', include_view('foo.views')),
 
-Philosophy behind this is that the current urlconf system was designed for
-functional views - class-based  views have to hide themselves as functions 
+The philosophy behind this is that the current urlconf system was designed for
+functional views - class-based views have to hide themselves as functions 
 with an as_view function, which is ugly. By moving responsibility for 
 generating these to the class view it avoids awkward manual repetition 
 and keeps all settings associated with the view in one place.
@@ -34,7 +34,6 @@ from django.shortcuts import HttpResponseRedirect
 
 
 from .functional import FunctionalView, LogicalView
-
 
 
 def make_comparison(v):
@@ -78,7 +77,7 @@ class AppUrl(object):
 
     def has_bakeable_views(self):
         for v in self.views:
-            if hasattr(v, "bake_args") and hasattr(v,"url_name"):
+            if hasattr(v, "bake_args") and hasattr(v, "url_name"):
                 if v.url_name:
                     return True
         return False
@@ -87,10 +86,14 @@ class AppUrl(object):
         """
         bake all views with a bake_path
         """
+
+        restrict_to_views = kwargs.get("only_views",[])
+
         for v in self.views:
-            if hasattr(v, "bake_args") and hasattr(v,"url_name"):
-                if v.url_name:
-                    v.bake(**kwargs)
+            if hasattr(v, "bake_args") and hasattr(v, "url_name"):
+                if len(restrict_to_views) == 0 or v.url_name in restrict_to_views:
+                    if v.url_name:
+                        v.bake(**kwargs)
 
 
 def include_view(arg, namespace=None, app_name=None):
