@@ -216,7 +216,7 @@ class prelogic(GenericDecorator):
     args_map = ["order"]
     default_kwargs = {"order": 5}
 
-    def post_creation(self, obj):
+    def modify_function(self, obj):
         obj._prefix = self.__class__.prefix
         obj.order = self.order
         return obj
@@ -232,7 +232,7 @@ class postlogic(GenericDecorator):
     args_map = ["order"]
     default_kwargs = {"order": 5}
 
-    def post_creation(self, obj):
+    def modify_function(self, obj):
         obj._prefix = self.__class__.prefix
         obj.order = self.order
         return obj
