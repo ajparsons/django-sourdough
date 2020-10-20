@@ -1,2 +1,0 @@
-sphinx-apidoc ../useful_inkleby
-make html
