@@ -9,10 +9,7 @@ from django.http.response import HttpResponse
 from django.shortcuts import HttpResponseRedirect
 from .exceptions import RedirectException
 
-try:
-    from useful_inkleby.decorators import GenericDecorator
-except:
-    from ..decorators import GenericDecorator
+from useful_dectorator import GenericDecorator
 
 
 def handle_redirect(func):
