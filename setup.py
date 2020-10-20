@@ -2,12 +2,10 @@ from distutils.core import setup
 setup(
   name = 'django-sourdough',
   packages = ['django_sourdough',
-              'django_sourdough.admin',
               'django_sourdough.fields',
               'django_sourdough.models',
               'django_sourdough.management',
               'django_sourdough.management.commands',
-              'django_sourdough.forms',
               'django_sourdough.serialisers',
               'django_sourdough.views',
               ],
