@@ -3,7 +3,7 @@ import datetime
 import io
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dirsync import sync
 from django.conf import settings
@@ -173,8 +173,8 @@ class BakeView(LogicalView):
 
         if os.path.isfile(file_path) and only_old:
             t = os.path.getmtime(file_path)
-            last_modified = datetime.datetime.fromtimestamp(t)
-            if last_modified > datetime.datetime.now() - datetime.timedelta(days=only_old):
+            last_modified = datetime.fromtimestamp(t)
+            if last_modified > datetime.now() - timedelta(days=only_old):
                 return False
 
         print(u"saving {0}".format(file_path))
