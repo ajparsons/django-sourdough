@@ -145,15 +145,13 @@ class BakeView(LogicalView):
             else:
                 bake_path = self.__class__.bake_path
         else:
-            rev = reverse(self.__class__.url_name, args=args)
-            if os.name == 'nt': # fix paths for windows
-                bake_path = rev.replace("/", "\\")[1:]
-            else:
-                bake_path = bake_path[1:]
+            rev = reverse(self.__class__.url_name, args=args)[1:]
+            parts = rev.split("/")
+            bake_path = os.path.join(*parts)
             extension = "." + self.__class__.bake_file_type
             if bake_path[-len(extension):] == extension:
                 extension = ""
-            if bake_path[-1] == "\\":
+            if bake_path[-1]  in["/", "\\"]:
                 bake_path += "index" + extension
             else:
                 bake_path += extension
