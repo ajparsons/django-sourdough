@@ -98,7 +98,14 @@ class Command(BaseCommand):
             help='Number of workers (ignored if no worker param)',
         )
 
-        for n in range(1,11):
+        parser.add_argument(
+            '--verbose_level',
+            default=2,
+            type=int,
+            help='Level of printed updates',
+        )
+
+        for n in range(1, 11):
             parser.add_argument(
                 '--restrict_{0}'.format(n),
                 default=None,

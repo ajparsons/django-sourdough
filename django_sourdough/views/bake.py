@@ -4,6 +4,7 @@ import io
 import os
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from dirsync import sync
 from django.conf import settings
@@ -17,7 +18,7 @@ from .url import AppUrl
 
 try:
     from htmlmin.minify import html_minify
-except:
+except Exception:
     def html_minify(x): return x
 
 import six
@@ -55,12 +56,29 @@ class BakeView(LogicalView):
     bake_file_type = "html"
     baking_options = {"baking": False}
 
+    def add_to_error_log(self,
+                         bake_location,
+                         path,
+                         error,
+                         error_log="error_log.txt"):
+        """
+        Record errors path with basic information on cause.
+        """
+        cls_name = self.__class__.__name__
+        d = datetime.now().isoformat()
+        e_name = type(error).__name__
+        line = f"{d}: {cls_name} : {path} : {e_name} {error}\n"
+
+        with open(Path(bake_location, error_log), 'a') as f:
+            f.write(line)
+
     @classmethod
     def bake(cls, **kwargs):
         """
         render all versions of this view into a files
         """
         class_name = cls.url_name
+        verbose_level = kwargs["verbose_level"]
         print("baking {type}".format(type=class_name))
         cls.baking_options.update(kwargs)
         cls.baking_options["baking"] = True
@@ -70,11 +88,11 @@ class BakeView(LogicalView):
         func = i.bake_args
         limit_query = None
         if six.PY2:
-            l = len(getargspec(i.bake_args).args)
+            arg_no = len(getargspec(i.bake_args).args)
         else:
-            l = len(signature(i.bake_args).parameters)
+            arg_no = len(signature(i.bake_args).parameters)
 
-        if l > 1:
+        if arg_no > 1:
             generator = i.bake_args(limit_query)
         else:
             generator = i.bake_args()
@@ -82,11 +100,13 @@ class BakeView(LogicalView):
         options = list(generator)
 
         if options:
-            # based on --restrict_1, restrict_2 arguments - reduce arguments just to those that match
+            # based on --restrict_1, restrict_2 arguments
+            # reduce arguments just to those that match
             for n in range(1, 11):
                 restrict = kwargs["restrict_{0}".format(n)]
                 if restrict:
-                    options = [x for x in options if not x or x[n-1] in restrict]
+                    options = [
+                        x for x in options if not x or x[n-1] in restrict]
 
         total_to_bake = float(len(options))
 
@@ -102,25 +122,28 @@ class BakeView(LogicalView):
         step = 20
         start = datetime.now()
         process_count = 0
+        alert_template = "{type}: {done} out of {total} ({percent}%) {time}"
         for n, o in enumerate(options):
             # divide work into piles and skip those not needed
             if worker:
                 if (n + 1) % worker_count != worker_threshold:
                     continue
             process_count += 1
-            if o == None:
+            if o is None:
                 rendered = i.render_to_file(**kwargs)
             else:
                 rendered = i.render_to_file(o, **kwargs)
-            if process_count % step == 0 and rendered:
+            if process_count % step == 0 and rendered and verbose_level > 0:
                 end = datetime.now()
                 time_taken = end - start
                 p = round(((n+1)/total_to_bake) * 100, 2)
-                print("{type}: {done} out of {total} ({percent}%)".format(type=class_name,
-                                                                          done=n+1,
-                                                                          total=total_to_bake,
-                                                                          percent=p))
-                print("{step} completed in {time}.".format(step=step, time=time_taken))
+                print(alert_template.format(type=class_name,
+                                            done=n+1,
+                                            total=total_to_bake,
+                                            percent=p,
+                                            time=end.isoformat()))
+                print("{step} completed in {time}.".format(
+                    step=step, time=time_taken))
                 start = end
 
     @ classmethod
@@ -151,7 +174,7 @@ class BakeView(LogicalView):
             extension = "." + self.__class__.bake_file_type
             if bake_path[-len(extension):] == extension:
                 extension = ""
-            if bake_path[-1]  in["/", "\\"]:
+            if bake_path[-1] in ["/", "\\"]:
                 bake_path += "index" + extension
             else:
                 bake_path += extension
@@ -159,13 +182,19 @@ class BakeView(LogicalView):
         return os.path.join(settings.BAKE_LOCATION,
                             bake_path)
 
-    def render_to_file(self, args=None, only_absent=False, only_old=0, skip_errors=False, retry_errors=3, **kwargs):
+    def render_to_file(self,
+                       args=None,
+                       only_absent=False,
+                       only_old=0,
+                       skip_errors=False,
+                       retry_errors=3,
+                       verbose_level=2,
+                       **kwargs):
         """
         renders this set of arguments to a files
         """
-        if args == None:
+        if args is None:
             args = []
-
 
         file_path = self._get_bake_path(*args)
 
@@ -178,9 +207,10 @@ class BakeView(LogicalView):
             if last_modified > datetime.now() - timedelta(days=only_old):
                 return False
 
-        print(u"saving {0}".format(file_path))
+        if verbose_level > 1:
+            print(u"saving {0}".format(file_path))
         directory = os.path.dirname(file_path)
-        if os.path.isdir(directory) == False:
+        if os.path.isdir(directory) is False:
             os.makedirs(directory)
 
         request_path = file_path.replace(settings.BAKE_LOCATION, "")
@@ -201,23 +231,32 @@ class BakeView(LogicalView):
                     time.sleep(5)
                     pass
                 else:
+                    self.add_to_error_log(settings.BAKE_LOCATION,
+                                          request_path,
+                                          e
+                                          )
                     if not skip_errors:
                         raise e
                     else:
+                        error_notice = "suppressing error: {0} - {1}"
+                        e_name = type(e).__name__
                         print(
-                            "suppressing error: {0} - {1}".format(type(e).__name__, e))
+                            error_notice.format(e_name, e))
                         break
         if not context:
             return None
 
         banned_types = ['text/csv']
 
-        # if a valid response has already been generated by some layer of the structure
+        # if a valid response has already been 
+        # generated by some layer of the structure
+
         if isinstance(context, HttpResponse):
             html = html_minify(context.content)
             if context["Content-Type"] not in banned_types:
                 html = html.replace(
-                    "<html><head></head><body>", "").replace("</body></html>", "")
+                    "<html><head></head><body>", "")
+                html = html.replace("</body></html>", "")
         else:
             # normal case, we give the context to a view
             error_count = 0
@@ -236,8 +275,10 @@ class BakeView(LogicalView):
                         if not skip_errors:
                             raise e
                         else:
+                            e_name = type(e).__name__
+                            error_notice = "suppressing error: {0} - {1}"
                             print(
-                                "suppressing error: {0} - {1}".format(type(e).__name__, e))
+                                error_notice.format(e_name, e))
                             break
 
             if not result:
@@ -272,7 +313,8 @@ class BakeView(LogicalView):
 
     def bake_args(self, limit_query=None):
         """
-        subclass with a generator that feeds all possible arguments into the view
+        subclass with a generator that feeds
+        all possible arguments into the view
         """
         return [None]
 
@@ -304,7 +346,7 @@ class BaseBakeManager(object):
         for d in [settings.STATIC_ROOT]:
             dir_loc = self.get_static_destination()
             print("syncing {0}".format(d))
-            if os.path.isdir(dir_loc) == False:
+            if os.path.isdir(dir_loc) is False:
                 os.makedirs(dir_loc)
             sync(d, dir_loc, "sync")
 
