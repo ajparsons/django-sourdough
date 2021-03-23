@@ -6,7 +6,13 @@ Forked and reduced version of `useful_inkleby` package - docs there are useful f
 
 Python 3 and django 2+ only.
 
+Management commands:
+
+`python manage.py populate` - looks for a populate.populate function in either all apps, or apps listed after populate. 
+`python manage.py bake` - renders to a static site any compatible apps (or a specific app listed)
+
 Bake command command line switches:
+
 
 * --only_views 'view.url.name', 'second.view.name' - only bake certain views. 
 * --only_absent - only render pages that haven't already been rendered. 
@@ -21,3 +27,7 @@ Bake command command line switches:
 * --skip_assets - hook for asset generation like charts - turns off
 * --all_assets - hook for asset generation like charts - re-render all
 * --verbose_level - setting this to '1' takes out the file by file path prints. (default 2)
+
+Populate command line switches:
+
+* --option : specify a one word option to pass as an arg to the populate function in an app.
