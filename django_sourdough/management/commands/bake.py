@@ -114,7 +114,7 @@ class Command(BaseCommand):
             )
 
     def handle(self, *args, **options):
-        apps = [x for x in options['app'] if x not in kwargs]
+        apps = [x for x in options['app']]
 
         if len(apps) == 0:
             apps = [x.name for x in project_apps.get_app_configs()]
